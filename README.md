@@ -13,7 +13,7 @@ Needs python3-tk (Install in Debian systems: `sudo apt install -y python3 python
 run: `python3 main.py`
 
 ## Run under Windows
-Follows soon - I guess something like `pyinstaller --onefile --windowed main.py` and then start the .exe, idk.
+Run main.exe
 
 ## config.json
 ### "guests"
