@@ -6,12 +6,12 @@
     },
     {
       "full_name": "Elvira Hasler",
-      "comment": "Name des Gastes: Udo Lauch",
+      "comment": "Guest name: Udo Lauch",
       "max_guests": 1
     },
     {
       "full_name": "Elvira Hasler",
-      "comment": "Name des Gastes: Jim Juice",
+      "comment": "Guest name: Jim Juice",
       "max_guests": 1
     },
     {
@@ -30,34 +30,34 @@
   ],
   "room_categories": [
     {
-      "name": "Doppelzimmer",
+      "name": "Double room",
       "min_guests": 1,
       "max_guests": 2
     },
     {
-      "name": "Familienzimmer",
+      "name": "Family room",
       "min_guests": 3,
       "max_guests": 4
     },
     {
-      "name": "8-Bett-Dorm",
+      "name": "8 bed dorm",
       "min_guests": 1,
       "max_guests": 8
     },
     {
-      "name": "4-Bett-Dorm",
+      "name": "4 bed dorm",
       "min_guests": 1,
       "max_guests": 4
     },
     {
-      "name": "Frauen 6-Bett-Dorm",
+      "name": "Women only dorm",
       "min_guests": 1,
       "max_guests": 3
     }
   ],
   "extra_services": [
     "Late check-in",
-    "Parkplatz"
+    "Parking"
   ],
   "follow_up_tasks": [
     "Extend booking by 1 night",
@@ -68,13 +68,11 @@
   ],
   "breakfast_types": [
     "Deluxe",
-    "Normal-Frühstück",
-    "Mini-Frühstück",
-    "Budget-Frühstück",
-    "Birchermüesli"
+    "Normal",
+    "Mini"
   ],
   "breakfast_policy": {
-    "enabled": true,
+    "enabled": false,
     "probability_any_breakfast": 0.7,
     "probability_full_group_if_any": 0.7,
     "min_breakfasts": 0,
