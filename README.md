@@ -2,7 +2,12 @@
 Property manager system trainer
 
 Generates random scenarios to train your staff.
+
 Creates log files for controlling in the folder /tasks/.
+
+![Screenshot of a comment on a GitHub issue showing an image, added in the Markdown, of an Octocat smiling and raising a tentacle.](sshot.png)
+
+
 
 ## config.json
 ### "guests"
