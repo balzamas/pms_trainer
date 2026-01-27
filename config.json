@@ -18,6 +18,13 @@
     "Late check-in",
     "Parking"
   ],
+  "follow_up_tasks": [
+    "Extend booking by 1 night",
+    "Extend booking by 2 nights",
+    "Add another room/bed to the booking",
+    "Change room category (upgrade/downgrade)",
+    "Shorten stay by one night"
+  ],
     "breakfast_types": [
     "Deluxe",
     "Normal",
@@ -37,4 +44,5 @@
     },
   "stay_length_nights": { "min": 1, "max": 6 },
   "max_services": 1
+  "follow_up_probability": 0.33
 }
