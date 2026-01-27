@@ -46,7 +46,7 @@ jobs:
       - name: Build EXE (verbose)
         shell: pwsh
         run: |
-          pyinstaller --noconfirm --clean --windowed --log-level=DEBUG main.py
+          pyinstaller --noconfirm --clean --onefile --windowed --log-level=DEBUG main.py
 
       - name: Show dist folder (debug)
         shell: pwsh
