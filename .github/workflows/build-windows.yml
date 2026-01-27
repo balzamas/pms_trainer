@@ -37,28 +37,26 @@ jobs:
       - name: Build (onedir)
         shell: pwsh
         run: |
-          pyinstaller --noconfirm --clean --windowed --log-level=DEBUG main.py
+          pyinstaller --noconfirm --clean --windowed --log-level=DEBUG --name "PMS-Training-Scenario-Generator" main.py
 
-      # Copy config.json next to the exe output folder
       - name: Copy config.json into dist folder
         shell: pwsh
         run: |
-          $appFolder = Get-ChildItem dist -Directory | Select-Object -First 1
-          if (-not $appFolder) { throw "No dist subfolder found. Check PyInstaller output." }
-          Copy-Item -Force "config.json" (Join-Path $appFolder.FullName "config.json")
-          Write-Host "Copied config.json to $($appFolder.FullName)"
-
-      # Zip the whole runtime folder (includes _internal if present)
+          $appFolder = "dist\PMS-Training-Scenario-Generator"
+          if (-not (Test-Path $appFolder)) { throw "Expected folder not found: $appFolder" }
+          Copy-Item -Force "config.json" (Join-Path $appFolder "config.json")
+          Write-Host "Copied config.json to $appFolder"
+      
       - name: Create ZIP
         shell: pwsh
         run: |
-          $appFolder = Get-ChildItem dist -Directory | Select-Object -First 1
+          $appFolder = "dist\PMS-Training-Scenario-Generator"
           $tag = "${{ github.event.release.tag_name }}"
           if ([string]::IsNullOrWhiteSpace($tag)) { $tag = "${{ github.sha }}" }
-          $zipName = "windows-build-$tag.zip"
-          Compress-Archive -Path "$($appFolder.FullName)\*" -DestinationPath $zipName -Force
+          $zipName = "PMS-Training-Scenario-Generator-$tag-windows.zip"
+          Compress-Archive -Path "$appFolder\*" -DestinationPath $zipName -Force
           Write-Host "Created $zipName"
-
+      
       # Always upload ZIP as artifact (easy download from Actions)
       - name: Upload artifact (ZIP)
         uses: actions/upload-artifact@v4
