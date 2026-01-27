@@ -365,6 +365,8 @@ class App(tk.Tk):
         self.output = tk.Text(main, height=22, wrap="word", font=("Consolas", 9))
         self.output.pack(fill="both", expand=True)
 
+        self.output.tag_configure("followup", foreground="red")
+
         btn_row = ttk.Frame(main)
         btn_row.pack(fill="x", pady=(10, 0))
 
@@ -471,14 +473,25 @@ class App(tk.Tk):
 
         self.status_lbl.config(text=f"Saved ✓ {finished_at}")
 
-        # Update main text (no "no follow-up" line)
-        extra_lines = [f"\nSaved file: {os.path.relpath(task_file, app_dir())}"]
-        if followup:
-            extra_lines.append(f"Random follow-up: {followup}")
-
+        saved_line = f"Saved file: {os.path.relpath(task_file, app_dir())}"
         current_txt = self.output.get("1.0", "end").strip()
+
+        self.output.config(state="normal")
         self.output.delete("1.0", "end")
-        self.output.insert("1.0", current_txt + "\n\n" + "\n".join(extra_lines))
+
+        # Main text (unchanged, normal color)
+        self.output.insert("end", current_txt)
+
+        # Saved file line (normal)
+        self.output.insert("end", "\n\n" + saved_line + "\n")
+
+        # 🔴 Follow-up line (red)
+        if followup:
+            self.output.insert("end", "Follow-up: ", "followup")
+            self.output.insert("end", followup + "\n", "followup")
+
+        self.output.config(state="disabled")
+
 
         # Popup (no "no follow-up" if none)
         msg = (
