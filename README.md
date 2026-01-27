@@ -3,7 +3,12 @@ Property manager system trainer
 
 Generates random scenarios to train your staff. Focus is solely on creating new bookings/changing existing bookings.
 
-Creates log files for controlling in the folder /tasks/.
+In short:
+- Generator creates a booking scenario
+- Staff-member makes a booking following the scenario
+- Trainer manually checks the PMS to see if they made the reservation correctly
+
+Log files for controlling see folder /tasks/.
 
 ![Screenshot UI.](sshot.png)
 
