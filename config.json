@@ -1,22 +1,63 @@
 {
-    "guests": [
-    { "full_name": "Klara Mueller", "comment": "" },
-    { "full_name": "Elvira Hasler", "comment": "Name of guest: Udo Lauch", "max_guests": 1},
-    { "full_name": "Elvira Hasler", "comment": "Name guest: Jim Juice", "max_guests": 1},
-    { "full_name": "Gerd Gruebel", "comment": ""},
-    { "full_name": "Alma Seferovic", "comment": "", "max_guests": 1},
-    { "full_name": "Antonio Lungo", "comment": ""}
-    ],
+  "guests": [
+    {
+      "full_name": "Klara Müller",
+      "comment": ""
+    },
+    {
+      "full_name": "Elvira Hasler",
+      "comment": "Name des Gastes: Udo Lauch",
+      "max_guests": 1
+    },
+    {
+      "full_name": "Elvira Hasler",
+      "comment": "Name des Gastes: Jim Juice",
+      "max_guests": 1
+    },
+    {
+      "full_name": "Gerd Grübel",
+      "comment": ""
+    },
+    {
+      "full_name": "Alma Seferovic",
+      "comment": "",
+      "max_guests": 1
+    },
+    {
+      "full_name": "Antonio Lungo",
+      "comment": ""
+    }
+  ],
   "room_categories": [
-    { "name": "Double room", "min_guests": 1, "max_guests": 2 },
-    { "name": "Family room", "min_guests": 3, "max_guests": 4 },
-    { "name": "8 bed dormitory", "min_guests": 1, "max_guests": 8 },
-    { "name": "4 bed dormitory", "min_guests": 1, "max_guests": 4 },
-    { "name": "Female only dormitory", "min_guests": 1, "max_guests": 3 }
+    {
+      "name": "Doppelzimmer",
+      "min_guests": 1,
+      "max_guests": 2
+    },
+    {
+      "name": "Familienzimmer",
+      "min_guests": 3,
+      "max_guests": 4
+    },
+    {
+      "name": "8-Bett-Dorm",
+      "min_guests": 1,
+      "max_guests": 8
+    },
+    {
+      "name": "4-Bett-Dorm",
+      "min_guests": 1,
+      "max_guests": 4
+    },
+    {
+      "name": "Frauen 6-Bett-Dorm",
+      "min_guests": 1,
+      "max_guests": 3
+    }
   ],
   "extra_services": [
     "Late check-in",
-    "Parking"
+    "Parkplatz"
   ],
   "follow_up_tasks": [
     "Extend booking by 1 night",
@@ -25,24 +66,28 @@
     "Change room category (upgrade/downgrade)",
     "Shorten stay by one night"
   ],
-    "breakfast_types": [
+  "breakfast_types": [
     "Deluxe",
-    "Normal",
-    "Mini",
-    "Budget",
-    ],
-    "breakfast_policy": {
-    "enabled": false,
+    "Normal-Frühstück",
+    "Mini-Frühstück",
+    "Budget-Frühstück",
+    "Birchermüesli"
+  ],
+  "breakfast_policy": {
+    "enabled": true,
     "probability_any_breakfast": 0.7,
     "probability_full_group_if_any": 0.7,
     "min_breakfasts": 0,
     "max_breakfasts_per_guest": 1
-    },
-    "booking_window": {
+  },
+  "booking_window": {
     "earliest_arrival": "2027-02-01",
     "latest_arrival": "2027-04-30"
-    },
-  "stay_length_nights": { "min": 1, "max": 6 },
-  "max_services": 1
+  },
+  "stay_length_nights": {
+    "min": 1,
+    "max": 5
+  },
+  "max_services": 1,
   "follow_up_probability": 0.33
 }
