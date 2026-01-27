@@ -25,6 +25,9 @@ Your room categories with your max/min number of guests in the room.
 ### "extra_services"
 Your extra services.
 
+### "follow_up_tasks"
+After a reservation is created, a follow up task can appear. The reservation has to be changed.
+
 ### "breakfast_types"/"breakfast_policy"
 If you have breakfast on order, you can set here your options. If you don't have this, set "enabled": false.
 
