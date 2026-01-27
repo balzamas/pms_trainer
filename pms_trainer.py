@@ -334,7 +334,7 @@ class App(tk.Tk):
 
         self.title(APP_TITLE)
         self.geometry("900x900")
-        self.resizable(False, False)
+        self.resizable(True, True)
 
         style.configure(".", font=("Segoe UI", 10))
         style.configure("TLabelframe.Label", font=("Segoe UI", 10, "bold"))
