@@ -15,8 +15,7 @@ APP_TITLE = "PMS Training Scenario Generator"
 CONFIG_FILENAME = "config.json"
 
 # Author: d.berger@dontsniff.co.uk
-# Version: 0.1.0
-
+# Version: 0.1.1
 # -------------------- file helpers --------------------
 
 def app_dir() -> str:
