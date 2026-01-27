@@ -1,1 +1,50 @@
+name: Build Windows EXE
 
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if (Test-Path requirements.txt) { pip install -r requirements.txt }
+          pip install pyinstaller
+
+      # IMPORTANT: for debugging builds, you can temporarily remove --windowed
+      - name: Build with PyInstaller
+        run: |
+          pyinstaller --noconfirm --clean --onefile --windowed `
+            --name "PMS_Training_Scenario_Generator" `
+            --add-data "config.json;." `
+            pms_trainer.py
+
+      - name: Upload EXE artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-exe
+          path: dist/PMS_Training_Scenario_Generator.exe
+
+      # If you push a tag like v0.0.1 this will attach the exe to a GitHub Release
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/PMS_Training_Scenario_Generator.exe
