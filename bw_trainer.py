@@ -1,69 +1,179 @@
 import json
 import random
 import os
-import csv
 import sys
 import re
 from datetime import date, datetime, timedelta
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk
+from typing import Optional
 
+from config_editor import ConfigEditor  # <-- second file
+
+
+APP_TITLE = "PMS Training Scenario Generator"
+CONFIG_FILENAME = "config.json"
+
+# Author: d.berger@dontsniff.co.uk
+# Version: 0.1.0
+
+# -------------------- file helpers --------------------
 
 def app_dir() -> str:
+    # Works for PyInstaller onefile/onedir and normal python run
     if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
         return os.path.dirname(sys.executable)
     return os.path.dirname(os.path.abspath(__file__))
 
 
-def load_config(filename="config.json"):
-    cfg_path = os.path.join(app_dir(), filename)
-    with open(cfg_path, "r", encoding="utf-8") as f:
+def config_path() -> str:
+    return os.path.join(app_dir(), CONFIG_FILENAME)
+
+
+def load_config() -> dict:
+    with open(config_path(), "r", encoding="utf-8") as f:
         return json.load(f)
+
+
+def save_config(cfg: dict) -> None:
+    """
+    Saves config.json with a backup config.json.bak next to it.
+    """
+    path = config_path()
+    bak = path + ".bak"
+
+    if os.path.exists(path):
+        try:
+            with open(path, "rb") as src, open(bak, "wb") as dst:
+                dst.write(src.read())
+        except Exception:
+            pass
+
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(cfg, f, ensure_ascii=False, indent=2)
 
 
 def ensure_dirs():
     os.makedirs(os.path.join(app_dir(), "tasks"), exist_ok=True)
 
 
-def pick_guest(cfg) -> dict:
+# -------------------- UI helpers --------------------
+
+def show_popup(parent, title: str, message: str, *, width=860, height=580):
+    """
+    Robust popup with ALWAYS-visible OK button.
+    Uses grid + scrollable read-only Text so the button never gets pushed out.
+    """
+    win = tk.Toplevel(parent)
+    win.title(title)
+    win.geometry(f"{width}x{height}")
+    win.resizable(True, True)
+    win.transient(parent)
+    win.grab_set()
+
+    win.columnconfigure(0, weight=1)
+    win.rowconfigure(1, weight=1)
+
+    header = ttk.Frame(win, padding=(16, 12, 16, 6))
+    header.grid(row=0, column=0, sticky="ew")
+    ttk.Label(header, text=title, font=("Segoe UI", 12, "bold")).pack(anchor="w")
+
+    content = ttk.Frame(win, padding=(16, 6, 16, 6))
+    content.grid(row=1, column=0, sticky="nsew")
+    content.columnconfigure(0, weight=1)
+    content.rowconfigure(0, weight=1)
+
+    scrollbar = ttk.Scrollbar(content, orient="vertical")
+    scrollbar.grid(row=0, column=1, sticky="ns")
+
+    text = tk.Text(
+        content,
+        wrap="word",
+        font=("Segoe UI", 10),
+        yscrollcommand=scrollbar.set,
+        borderwidth=1,
+        relief="solid",
+    )
+    text.grid(row=0, column=0, sticky="nsew")
+    scrollbar.config(command=text.yview)
+
+    text.insert("1.0", message)
+    text.config(state="disabled")
+
+    buttons = ttk.Frame(win, padding=(16, 6, 16, 12))
+    buttons.grid(row=2, column=0, sticky="ew")
+    buttons.columnconfigure(0, weight=1)
+
+    ok_btn = ttk.Button(buttons, text="OK", command=win.destroy)
+    ok_btn.grid(row=0, column=1, sticky="e")
+
+    parent.update_idletasks()
+    x = parent.winfo_x() + (parent.winfo_width() // 2) - (width // 2)
+    y = parent.winfo_y() + (parent.winfo_height() // 2) - (height // 2)
+    win.geometry(f"{width}x{height}+{x}+{y}")
+
+    win.bind("<Return>", lambda _e: win.destroy())
+    win.bind("<Escape>", lambda _e: win.destroy())
+    ok_btn.focus_set()
+    return win
+
+
+# -------------------- scenario generation --------------------
+
+def choose_compatible_guest_category_and_count(cfg):
     guests = cfg.get("guests", [])
+    categories = cfg.get("room_categories", [])
+
     if not guests:
-        raise ValueError("config.json has no 'guests' list.")
+        raise ValueError("config.json has no guests.")
+    if not categories:
+        raise ValueError("config.json has no room_categories.")
 
-    guest = random.choice(guests)
+    valid = []
+    for g_raw in guests:
+        g = dict(g_raw)
+        name = str(g.get("full_name", "")).strip()
+        if not name:
+            continue
 
-    name = str(guest.get("full_name", "")).strip()
-    if not name:
-        raise ValueError("Each guest must have a non-empty 'full_name'.")
+        g.setdefault("comment", "")
+        g.setdefault("min_guests", 1)
+        g.setdefault("max_guests", 99)
 
-    # Defaults
-    guest.setdefault("comment", "")
-    guest.setdefault("min_guests", 1)
-    guest.setdefault("max_guests", 99)
+        try:
+            gmin = int(g["min_guests"])
+            gmax = int(g["max_guests"])
+        except Exception:
+            continue
+        if gmax < gmin:
+            continue
 
-    # Validate
-    try:
-        guest["min_guests"] = int(guest["min_guests"])
-        guest["max_guests"] = int(guest["max_guests"])
-    except Exception as e:
-        raise ValueError(f"Guest '{name}' has invalid min_guests/max_guests: {e}")
+        for c in categories:
+            try:
+                cmin = int(c.get("min_guests", 1))
+                cmax = int(c.get("max_guests", 1))
+            except Exception:
+                continue
+            low = max(gmin, cmin)
+            high = min(gmax, cmax)
+            if low <= high:
+                valid.append((g, c, low, high))
 
-    if guest["max_guests"] < guest["min_guests"]:
-        raise ValueError(f"Guest '{name}' has max_guests < min_guests.")
+    if not valid:
+        raise ValueError("No valid guest/category combinations. Check guest/room min/max in config.json.")
 
-    return guest
+    g, c, low, high = random.choice(valid)
+    guest_count = random.randint(low, high)
+    return g, c, guest_count
 
 
 def random_dates(cfg):
-    """
-    Arrival between earliest_arrival and latest_arrival (inclusive) in config.json booking_window.
-    """
     bw = cfg.get("booking_window", {})
     earliest_str = bw.get("earliest_arrival")
     latest_str = bw.get("latest_arrival")
     if not earliest_str or not latest_str:
         raise ValueError(
-            "config.json missing booking_window. Add:\n"
+            "config.json missing booking_window.\n\nAdd:\n"
             '"booking_window": {"earliest_arrival":"YYYY-MM-DD","latest_arrival":"YYYY-MM-DD"}'
         )
 
@@ -75,13 +185,13 @@ def random_dates(cfg):
     delta_days = (latest - earliest).days
     arrival = earliest + timedelta(days=random.randint(0, delta_days))
 
-    nights = random.randint(cfg["stay_length_nights"]["min"], cfg["stay_length_nights"]["max"])
+    stay = cfg.get("stay_length_nights", {"min": 1, "max": 5})
+    nights = random.randint(int(stay["min"]), int(stay["max"]))
     departure = arrival + timedelta(days=nights)
     return arrival, departure, nights
 
 
 def format_breakfast_counts(selected_types: list[str]) -> str:
-    # Aggregate to "2x Normal-Frühstück, 1x Budget-Frühstück"
     counts = {}
     for t in selected_types:
         counts[t] = counts.get(t, 0) + 1
@@ -89,14 +199,7 @@ def format_breakfast_counts(selected_types: list[str]) -> str:
     return ", ".join(parts)
 
 
-def generate_breakfast_service(cfg, guest_count: int):
-    """
-    Rules:
-    - probability_any_breakfast (default 0.7): booking has breakfast at all.
-    - If breakfast exists: probability_full_group_if_any (default 0.7) => breakfast_count == guest_count.
-      Otherwise breakfast_count is random and NOT necessarily for everyone.
-    Breakfast types can be mixed across breakfasts.
-    """
+def generate_breakfast_service(cfg, guest_count: int) -> Optional[str]:
     policy = cfg.get("breakfast_policy", {})
     if not bool(policy.get("enabled", False)):
         return None
@@ -110,18 +213,13 @@ def generate_breakfast_service(cfg, guest_count: int):
     p_any = max(0.0, min(1.0, p_any))
     p_full = max(0.0, min(1.0, p_full))
 
-    # 1) Any breakfast at all?
     if random.random() > p_any:
         return None
 
-    # 2) If yes: full group in 70% of breakfast bookings, else partial
     if guest_count == 1:
         breakfast_count = 1
     else:
-        if random.random() <= p_full:
-            breakfast_count = guest_count
-        else:
-            breakfast_count = random.randint(1, guest_count - 1)
+        breakfast_count = guest_count if random.random() <= p_full else random.randint(1, guest_count - 1)
 
     chosen = [random.choice(types) for _ in range(breakfast_count)]
     return f"Breakfast: {format_breakfast_counts(chosen)}"
@@ -129,16 +227,13 @@ def generate_breakfast_service(cfg, guest_count: int):
 
 def generate_scenario(cfg):
     guest, category, guests_count = choose_compatible_guest_category_and_count(cfg)
-
     arrival, departure, nights = random_dates(cfg)
 
-    # --- your existing "other services" logic stays ---
     max_services = int(cfg.get("max_services", 3))
     services_pool = list(cfg.get("extra_services", []))
     num_services = random.randint(0, min(max_services, len(services_pool))) if services_pool else 0
     other_services = random.sample(services_pool, k=num_services) if num_services > 0 else []
 
-    # --- keep breakfast random exactly as before ---
     breakfast_service = generate_breakfast_service(cfg, guests_count)
     if breakfast_service:
         other_services = [breakfast_service] + other_services
@@ -153,59 +248,8 @@ def generate_scenario(cfg):
         "Arrival": arrival.isoformat(),
         "Departure": departure.isoformat(),
         "Nights": nights,
-        "Extra services": extra_services_str
+        "Extra services": extra_services_str,
     }
-
-def choose_compatible_guest_category_and_count(cfg):
-    """
-    Returns (guest, category, guest_count) such that:
-    - guest_count is valid for BOTH guest and room category constraints.
-    """
-    guests = cfg.get("guests", [])
-    categories = cfg.get("room_categories", [])
-
-    if not guests:
-        raise ValueError("config.json has no guests.")
-    if not categories:
-        raise ValueError("config.json has no room_categories.")
-
-    # Build all valid combinations
-    valid = []
-    for g_raw in guests:
-        g = dict(g_raw)  # shallow copy so we can safely set defaults
-        name = str(g.get("full_name", "")).strip()
-        if not name:
-            continue
-        g.setdefault("comment", "")
-        g.setdefault("min_guests", 1)
-        g.setdefault("max_guests", 99)
-
-        try:
-            gmin = int(g["min_guests"])
-            gmax = int(g["max_guests"])
-        except Exception:
-            continue
-        if gmax < gmin:
-            continue
-
-        for c in categories:
-            cmin = int(c["min_guests"])
-            cmax = int(c["max_guests"])
-
-            low = max(gmin, cmin)
-            high = min(gmax, cmax)
-
-            if low <= high:
-                valid.append((g, c, low, high))
-
-    if not valid:
-        raise ValueError(
-            "No valid guest/category combinations. Check guest min/max and room_categories min/max in config.json."
-        )
-
-    g, c, low, high = random.choice(valid)
-    guest_count = random.randint(low, high)
-    return g, c, guest_count
 
 
 def sanitize_for_filename(text: str) -> str:
@@ -241,6 +285,9 @@ Arrival:          {scenario['Arrival']}
 Departure:        {scenario['Departure']}
 Nights:           {scenario['Nights']}
 Extra services:   {scenario['Extra services']}
+
+FOLLOW-UPS
+----------
 """
 
     with open(filename, "w", encoding="utf-8") as f:
@@ -249,74 +296,81 @@ Extra services:   {scenario['Extra services']}
     return filename, finished_at
 
 
-def append_completion_log(task_file, scenario, booking_number, finished_at, generated_id):
-    log_file = os.path.join(app_dir(), "completions.csv")
-    file_exists = os.path.exists(log_file)
+def append_followup_to_task(task_file: str, followup_text: str):
+    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with open(task_file, "a", encoding="utf-8") as f:
+        f.write(f"\n- {ts}: {followup_text}\n")
 
-    headers = [
-        "finished_at",
-        "task_id",
-        "booking_number",
-        "task_file",
-        "guest_name",
-        "guest_comment",
-        "room_category",
-        "guests",
-        "arrival",
-        "departure",
-        "extra_services"
-    ]
 
-    row = {
-        "finished_at": finished_at,
-        "task_id": generated_id,
-        "booking_number": booking_number,
-        "task_file": os.path.basename(task_file),
-        "guest_name": scenario.get("Guest name", ""),
-        "guest_comment": scenario.get("Guest comment", ""),
-        "room_category": scenario["Room category"],
-        "guests": scenario["Number of guests"],
-        "arrival": scenario["Arrival"],
-        "departure": scenario["Departure"],
-        "extra_services": scenario["Extra services"]
-    }
+def pick_random_followup(cfg) -> Optional[str]:
+    tasks = cfg.get("follow_up_tasks", [])
+    tasks = [t.strip() for t in tasks if isinstance(t, str) and t.strip()]
+    if not tasks:
+        return None
+    return random.choice(tasks)
 
-    with open(log_file, "a", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=headers)
-        if not file_exists:
-            writer.writeheader()
-        writer.writerow(row)
 
+def should_generate_followup(cfg) -> bool:
+    p = cfg.get("follow_up_probability", 1.0 / 3.0)
+    try:
+        p = float(p)
+    except Exception:
+        p = 1.0 / 3.0
+    p = max(0.0, min(1.0, p))
+    return random.random() < p
+
+
+# -------------------- main app --------------------
 
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("PMS Training Scenario Generator")
+
+        style = ttk.Style(self)
+        try:
+            style.theme_use("clam")
+        except Exception:
+            pass
+
+        self.title(APP_TITLE)
         self.geometry("900x900")
         self.resizable(False, False)
 
+        style.configure(".", font=("Segoe UI", 10))
+        style.configure("TLabelframe.Label", font=("Segoe UI", 10, "bold"))
+        style.configure("Header.TLabel", font=("Segoe UI", 12, "bold"))
+
         try:
-            self.cfg = load_config("config.json")
+            self.cfg = load_config()
         except Exception as e:
-            messagebox.showerror("Config error", f"Could not load config.json next to the app:\n\n{e}")
-            self.destroy()
+            show_popup(
+                self,
+                "Config error",
+                f"Could not load {CONFIG_FILENAME} next to the app.\n\n{e}",
+                width=900,
+                height=520,
+            )
+            self.after(50, self.destroy)
             return
 
         self.current_scenario = None
         self.generated_id = None
+        self.last_task_file = None
 
         main = ttk.Frame(self, padding=16)
         main.pack(fill="both", expand=True)
 
-        ttk.Label(main, text="PMS training scenario", font=("Segoe UI", 12, "bold")).pack(anchor="w", pady=(0, 10))
+        ttk.Label(main, text="PMS training scenario", style="Header.TLabel").pack(anchor="w", pady=(0, 10))
 
-        self.output = tk.Text(main, height=18, wrap="word", font=("Consolas", 10))
+        self.output = tk.Text(main, height=22, wrap="word", font=("Consolas", 9))
         self.output.pack(fill="both", expand=True)
 
         btn_row = ttk.Frame(main)
         btn_row.pack(fill="x", pady=(10, 0))
+
         ttk.Button(btn_row, text="New task", command=self.on_new_task).pack(side="left")
         ttk.Button(btn_row, text="Copy scenario", command=self.on_copy).pack(side="left", padx=(8, 0))
+        ttk.Button(btn_row, text="Edit config", command=self.on_edit_config).pack(side="left", padx=(8, 0))
 
         completion = ttk.LabelFrame(main, text="Completion", padding=10)
         completion.pack(fill="x", pady=(10, 0))
@@ -331,9 +385,26 @@ class App(tk.Tk):
 
         self.on_new_task()
 
+    def on_edit_config(self):
+        def on_save(new_cfg: dict):
+            self.cfg = new_cfg
+            try:
+                save_config(self.cfg)
+                show_popup(self, "Saved", "Config saved successfully.", width=700, height=380)
+            except Exception as e:
+                show_popup(self, "Save error", f"Could not save config.\n\n{e}", width=900, height=520)
+
+        ConfigEditor(self, self.cfg, on_save_callback=on_save)
+
     def on_new_task(self):
-        self.current_scenario = generate_scenario(self.cfg)
+        try:
+            self.current_scenario = generate_scenario(self.cfg)
+        except Exception as e:
+            show_popup(self, "Scenario error", str(e), width=900, height=520)
+            return
+
         self.generated_id = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        self.last_task_file = None
 
         self.booking_var.set("")
         self.status_lbl.config(text="")
@@ -354,7 +425,7 @@ class App(tk.Tk):
             f"Extra services:   {s['Extra services']}",
             "",
             "No file is saved yet.",
-            "When finished in the PMS, enter the booking number and click 'Mark finished'."
+            "When finished in the PMS, enter the booking number and click 'Mark finished'.",
         ]
 
         self.output.delete("1.0", "end")
@@ -365,34 +436,60 @@ class App(tk.Tk):
         self.clipboard_clear()
         self.clipboard_append(txt)
         self.update()
-        messagebox.showinfo("Copied", "Scenario copied to clipboard.")
+        show_popup(self, "Copied", "Scenario copied to clipboard.", width=700, height=380)
 
     def on_finish(self):
         if not self.current_scenario or not self.generated_id:
-            messagebox.showerror("No task", "Click 'New task' first.")
+            show_popup(self, "No task", "Click 'New task' first.", width=700, height=380)
             return
 
         booking_number = self.booking_var.get().strip()
         if not booking_number:
-            messagebox.showwarning("Missing booking number", "Please enter the PMS booking number.")
+            show_popup(self, "Missing booking number", "Please enter the PMS booking number.", width=760, height=420)
             return
         if len(booking_number) < 3:
-            messagebox.showwarning("Booking number too short", "Please enter a valid booking number.")
+            show_popup(self, "Booking number too short", "Please enter a valid booking number.", width=760, height=420)
             return
 
-        task_file, finished_at = write_task_file(self.current_scenario, booking_number, self.generated_id)
-        append_completion_log(task_file, self.current_scenario, booking_number, finished_at, self.generated_id)
+        try:
+            task_file, finished_at = write_task_file(self.current_scenario, booking_number, self.generated_id)
+        except Exception as e:
+            show_popup(self, "Save error", f"Could not save task file.\n\n{e}", width=900, height=520)
+            return
+
+        self.last_task_file = task_file
+
+        followup: Optional[str] = None
+        if should_generate_followup(self.cfg):
+            followup = pick_random_followup(self.cfg)
+            if followup:
+                try:
+                    append_followup_to_task(task_file, followup)
+                except Exception as e:
+                    show_popup(self, "Follow-up error", f"Could not append follow-up.\n\n{e}", width=900, height=520)
+                    followup = None
 
         self.status_lbl.config(text=f"Saved ✓ {finished_at}")
 
+        # Update main text (no "no follow-up" line)
+        extra_lines = [f"\nSaved file: {os.path.relpath(task_file, app_dir())}"]
+        if followup:
+            extra_lines.append(f"Random follow-up: {followup}")
+
         current_txt = self.output.get("1.0", "end").strip()
         self.output.delete("1.0", "end")
-        self.output.insert("1.0", current_txt + f"\n\nSaved file: {os.path.relpath(task_file, app_dir())}")
+        self.output.insert("1.0", current_txt + "\n\n" + "\n".join(extra_lines))
 
-        messagebox.showinfo(
-            "Finished",
-            f"Saved task file and log.\n\nBooking number: {booking_number}\nFile: {os.path.basename(task_file)}"
+        # Popup (no "no follow-up" if none)
+        msg = (
+            f"Saved task file.\n\n"
+            f"Booking number: {booking_number}\n"
+            f"File: {os.path.basename(task_file)}"
         )
+        if followup:
+            msg += f"\n\nRandom follow-up:\n{followup}"
+
+        show_popup(self, "Task finished", msg, width=900, height=560)
 
 
 if __name__ == "__main__":
