@@ -10,10 +10,10 @@ Creates log files for controlling in the folder /tasks/.
 ## Run under Linux
 Needs python3-tk (Install in Debian systems: `sudo apt install -y python3 python3-tk`)
 
-run: `python3 pms_trainer.py`
+run: `python3 main.py`
 
 ## Run under Windows
-Follows soon - I guess something like `pyinstaller --onefile --windowed pms_trainer.py` and then start the .exe, idk.
+Follows soon - I guess something like `pyinstaller --onefile --windowed main.py` and then start the .exe, idk.
 
 ## config.json
 ### "guests"
