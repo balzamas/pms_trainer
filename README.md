@@ -34,3 +34,8 @@ If you have breakfast on order, you can set here your options. If you don't have
 ### "booking_window"
 Earliest/latest date for the generated scenarios. In case you don't have a training system.
 
+--------------------------------------------
+
+Coded by ChatGPT, prompted by d.berger@dontsniff.co.uk
+
+Repo: https://github.com/balzamas/pms_trainer/
