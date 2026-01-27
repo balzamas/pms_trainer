@@ -6,21 +6,20 @@ on:
     branches: ["main"]
     paths:
       - "main.py"
+      - "config_editor.py"
+      - "config.json"
+  release:
+    types: [published]
 
 jobs:
   build:
     runs-on: windows-latest
+    permissions:
+      contents: write   # needed for uploading to Releases
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Show repo files (debug)
-        shell: pwsh
-        run: |
-          Get-Location
-          Get-ChildItem
-          if (Test-Path ".github") { Get-ChildItem .github -Recurse }
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -31,42 +30,45 @@ jobs:
         shell: pwsh
         run: |
           python -m pip install --upgrade pip
-          pip --version
-          python --version
           pip install pyinstaller
           if (Test-Path "requirements.txt") { pip install -r requirements.txt }
 
-      - name: Verify entry file exists (debug)
+      # Build ONEDIR (so config.json can sit next to the exe)
+      - name: Build (onedir)
         shell: pwsh
         run: |
-          if (-not (Test-Path "main.py")) {
-            Write-Error "main.py not found in repo root."
-          } else {
-            Write-Host "Found main.py"
-          }
+          pyinstaller --noconfirm --clean --windowed --log-level=DEBUG main.py
 
-      - name: Build EXE (verbose)
+      # Copy config.json next to the exe output folder
+      - name: Copy config.json into dist folder
         shell: pwsh
         run: |
-          pyinstaller --noconfirm --clean --onefile --windowed --log-level=DEBUG main.py
+          $appFolder = Get-ChildItem dist -Directory | Select-Object -First 1
+          if (-not $appFolder) { throw "No dist subfolder found. Check PyInstaller output." }
+          Copy-Item -Force "config.json" (Join-Path $appFolder.FullName "config.json")
+          Write-Host "Copied config.json to $($appFolder.FullName)"
 
-      - name: Show dist folder (debug)
+      # Zip the whole runtime folder (includes _internal if present)
+      - name: Create ZIP
         shell: pwsh
         run: |
-          Write-Host "== Repo root =="
-          Get-ChildItem
-          Write-Host "== dist =="
-          if (Test-Path "dist") { Get-ChildItem "dist" -Force } else { Write-Host "dist folder does not exist" }
-          Write-Host "== build =="
-          if (Test-Path "build") { Get-ChildItem "build" -Force } else { Write-Host "build folder does not exist" }
-          Write-Host "== Any exe anywhere (top 3 levels) =="
-          Get-ChildItem -Recurse -Depth 3 -Filter *.exe -ErrorAction SilentlyContinue | Select-Object FullName
+          $appFolder = Get-ChildItem dist -Directory | Select-Object -First 1
+          $tag = "${{ github.event.release.tag_name }}"
+          if ([string]::IsNullOrWhiteSpace($tag)) { $tag = "${{ github.sha }}" }
+          $zipName = "windows-build-$tag.zip"
+          Compress-Archive -Path "$($appFolder.FullName)\*" -DestinationPath $zipName -Force
+          Write-Host "Created $zipName"
 
-      - name: Upload build artifact
+      # Always upload ZIP as artifact (easy download from Actions)
+      - name: Upload artifact (ZIP)
         uses: actions/upload-artifact@v4
         with:
           name: windows-build
-          path: |
-            dist/**
-            build/**
-            *.spec
+          path: windows-build-*.zip
+
+      # Also attach ZIP to the GitHub Release when a release is published
+      - name: Upload ZIP to GitHub Release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: windows-build-*.zip
