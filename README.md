@@ -7,7 +7,13 @@ Creates log files for controlling in the folder /tasks/.
 
 ![Screenshot of a comment on a GitHub issue showing an image, added in the Markdown, of an Octocat smiling and raising a tentacle.](sshot.png)
 
+## Run under Linux
+Needs python3-tk (Install in Debian systems: `sudo apt install -y python3 python3-tk`)
 
+run: `python3 bw_trainer.py`
+
+## Run under Windows
+Follows soon - I guess something like `pyinstaller --onefile --windowed pms_trainer.py` and then start the .exe, idk.
 
 ## config.json
 ### "guests"
