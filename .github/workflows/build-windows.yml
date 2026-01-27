@@ -33,7 +33,6 @@ jobs:
         run: |
           pyinstaller --noconfirm --clean --onefile --windowed `
             --name "PMS_Training_Scenario_Generator" `
-            --add-data "config.json;." `
             pms_trainer.py
 
       - name: Upload EXE artifact
