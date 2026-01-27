@@ -25,7 +25,7 @@
     "Budget",
     ],
     "breakfast_policy": {
-    "enabled": true,
+    "enabled": false,
     "probability_any_breakfast": 0.7,
     "probability_full_group_if_any": 0.7,
     "min_breakfasts": 0,
