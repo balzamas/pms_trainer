@@ -230,11 +230,21 @@ def config_editor(cfg: dict) -> tuple[dict, bool]:
         col1, col2 = st.columns(2)
         with col1:
             st.subheader("Extra services")
-            services_txt = st.text_area("One per line", "\n".join(cfg.get("extra_services", [])), height=240)
+            services_txt = st.text_area(
+                "One per line",
+                "\n".join(cfg.get("extra_services", [])),
+                height=240,
+                key="cfg_extra_services_textarea",
+                )
             cfg["extra_services"] = [s.strip() for s in services_txt.splitlines() if s.strip()]
         with col2:
             st.subheader("Follow-up tasks")
-            followups_txt = st.text_area("One per line", "\n".join(cfg.get("follow_up_tasks", [])), height=240)
+            followups_txt = st.text_area(
+                "One per line",
+                "\n".join(cfg.get("follow_up_tasks", [])),
+                height=240,
+                key="cfg_followups_textarea",
+                )   
             cfg["follow_up_tasks"] = [s.strip() for s in followups_txt.splitlines() if s.strip()]
 
     # --- Breakfast ---
@@ -244,7 +254,12 @@ def config_editor(cfg: dict) -> tuple[dict, bool]:
         pol["probability_any_breakfast"] = st.slider("Probability any breakfast", 0.0, 1.0, float(pol.get("probability_any_breakfast", 0.7)))
         pol["probability_full_group_if_any"] = st.slider("Probability full group if any", 0.0, 1.0, float(pol.get("probability_full_group_if_any", 0.7)))
 
-        types_txt = st.text_area("Breakfast types (one per line)", "\n".join(cfg.get("breakfast_types", [])), height=160)
+        types_txt = st.text_area(
+                "Breakfast types (one per line)",
+                "\n".join(cfg.get("breakfast_types", [])),
+                height=160,
+                key="cfg_breakfast_types_textarea",
+            )
         cfg["breakfast_types"] = [t.strip() for t in types_txt.splitlines() if t.strip()]
         cfg["breakfast_policy"] = pol
 
