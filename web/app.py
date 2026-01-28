@@ -375,44 +375,49 @@ elif page == "Scenario":
 
     with col2:
         st.subheader("Completion")
-        booking_number = st.text_input("Booking number")
+with st.form("finish_task"):
+    booking_number = st.text_input("Booking number")
 
-        can_finish = bool(st.session_state.get("scenario")) and booking_number.strip()
+    submitted = st.form_submit_button(
+        "Mark finished",
+        disabled=not st.session_state.get("scenario")
+    )
 
-        if st.button("Mark finished", disabled=not can_finish):
-            followup: Optional[str] = None
-            if should_generate_followup(cfg):
-                followup = pick_random_followup(cfg)
-
-            try:
-                sb = get_authed_sb()
-                db.insert_task(
-                    sb=sb,
-                    user_id=st.session_state["user_id"],
-                    generated_id=st.session_state["generated_id"],
-                    booking_number=booking_number.strip(),
-                    scenario_json=st.session_state["scenario"],
-                    followup_text=followup,
-                )
-                st.success("Saved task result to database.")
-            except Exception as e:
-                st.error(f"Saving task failed: {e}")
-                st.stop()
-
-            txt = render_task_text(
-                st.session_state["scenario"],
-                booking_number.strip(),
-                st.session_state["generated_id"],
-                followup,
+    if submitted and booking_number.strip():
+        followup: Optional[str] = None
+        if should_generate_followup(cfg):
+            followup = pick_random_followup(cfg)
+    
+        try:
+            sb = get_authed_sb()
+            db.insert_task(
+                sb=sb,
+                user_id=st.session_state["user_id"],
+                generated_id=st.session_state["generated_id"],
+                booking_number=booking_number.strip(),
+                scenario_json=st.session_state["scenario"],
+                followup_text=followup,
             )
-            st.download_button(
-                "Download task TXT",
-                data=txt,
-                file_name=f"PMS_Task_{st.session_state['generated_id']}_BN-{booking_number.strip()}.txt",
-            )
-
-            if followup:
-                st.warning(f"Follow-up: {followup}")
+            st.success("Saved task result to database.")
+        except Exception as e:
+            st.error(f"Saving task failed: {e}")
+            st.stop()
+    
+        txt = render_task_text(
+            st.session_state["scenario"],
+            booking_number.strip(),
+            st.session_state["generated_id"],
+            followup,
+        )
+    
+        st.download_button(
+            "Download task TXT",
+            data=txt,
+            file_name=f"PMS_Task_{st.session_state['generated_id']}_BN-{booking_number.strip()}.txt",
+        )
+    
+        if followup:
+            st.warning(f"Follow-up: {followup}")
     
 elif page == "Task history":
     st.subheader("Task history (latest 50)")
