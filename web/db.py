@@ -93,7 +93,7 @@ class DB:
             raise RuntimeError(f"Supabase upsert_config error: {err}")
 
     # ---------- tasks ----------
-
+    
     def insert_task(
         self,
         sb: Client,
@@ -110,16 +110,22 @@ class DB:
                 "booking_number": booking_number,
                 "scenario_json": scenario_json,
                 "followup_text": followup_text,
+                "review_status": "new",  # ✅ default
             }
         ).execute()
-
+        
     def list_tasks(self, sb: Client, user_id: str, limit: int = 50) -> list[dict]:
         res = (
             sb.table("tasks")
-            .select("id, generated_id, booking_number, followup_text, finished_at, scenario_json")
+            .select("id, generated_id, booking_number, followup_text, finished_at, scenario_json, review_status")
             .eq("user_id", user_id)
             .order("finished_at", desc=True)
             .limit(limit)
             .execute()
         )
         return res.data or []
+
+    def update_task_review_status(self, sb: Client, task_id: str, review_status: str) -> None:
+        if review_status not in ("new", "okay", "needs_review"):
+            raise ValueError("Invalid review_status.")
+        sb.table("tasks").update({"review_status": review_status}).eq("id", task_id).execute()
