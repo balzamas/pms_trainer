@@ -194,6 +194,8 @@ def config_editor(cfg: dict) -> tuple[dict, bool]:
         if guests_df.empty:
             guests_df = pd.DataFrame([{"full_name": "", "comment": "", "min_guests": 1, "max_guests": 99}])
 
+        guests_df = guests_df.reindex(columns=["full_name", "comment", "min_guests", "max_guests"])
+        
         guests_df = st.data_editor(
             guests_df,
             use_container_width=True,
@@ -217,7 +219,10 @@ def config_editor(cfg: dict) -> tuple[dict, bool]:
         cats_df = pd.DataFrame(cfg.get("room_categories", []))
         if cats_df.empty:
             cats_df = pd.DataFrame([{"name": "", "min_guests": 1, "max_guests": 99}])
-    
+
+        # ✅ force UI column order
+        cats_df = cats_df.reindex(columns=["name", "min_guests", "max_guests"])
+        
         cats_df = st.data_editor(
             cats_df,
             use_container_width=True,
