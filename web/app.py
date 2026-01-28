@@ -310,7 +310,7 @@ if "cfg" not in st.session_state:
 
 cfg = st.session_state["cfg"]
 
-st.title("PMS Training Scenario Generator (Web)")
+st.title("PMS Scenario Generator")
 
 page = st.radio("Menu", ["Scenario", "Config", "Task history"], horizontal=True)
 
