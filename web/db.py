@@ -47,37 +47,37 @@ class DB:
     # ---------- configs ----------
     def get_config(self, sb: Client, user_id: str) -> Optional[dict]:
         try:
-            q = sb.table("configs").select("config_json").eq("user_id", user_id).maybe_single()
-            res = q.execute()
+            # simplest possible query
+            res = sb.table("configs").select("*").limit(1).execute()
         except Exception as e:
-            raise RuntimeError(f"Supabase get_config exception: {repr(e)}")
+            raise RuntimeError(f"Supabase query exception: {repr(e)}")
     
-        # Debug: force visibility
         if res is None:
-            # This strongly hints at a client/config issue rather than "no rows"
-            raise RuntimeError(
-                "Supabase get_config failed: execute() returned None.\n"
-                "Check: SUPABASE_URL/KEY correct, tables exist, and RLS policies.\n"
-                "Also verify your supabase-py version matches requirements."
-            )
+            raise RuntimeError("Supabase query returned None (HTTP client issue or incompatible runtime).")
     
-        # supabase-py response usually has: data, error, status_code, count
         err = getattr(res, "error", None)
         if err:
-            raise RuntimeError(f"Supabase get_config error: {err}")
+            raise RuntimeError(f"Supabase query error: {err}")
     
-        data = getattr(res, "data", None)
+        # now try the real query
+        try:
+            res2 = sb.table("configs").select("config_json").eq("user_id", user_id).execute()
+        except Exception as e:
+            raise RuntimeError(f"Supabase real query exception: {repr(e)}")
+    
+        if res2 is None:
+            raise RuntimeError("Supabase real query returned None.")
+        err2 = getattr(res2, "error", None)
+        if err2:
+            raise RuntimeError(f"Supabase real query error: {err2}")
+    
+        data = getattr(res2, "data", None)
         if not data:
             return None
-    
-        # maybe_single() returns dict, not list
+        if isinstance(data, list):
+            return data[0].get("config_json") if data else None
         if isinstance(data, dict):
             return data.get("config_json")
-    
-        # fallback if it returns list
-        if isinstance(data, list) and data:
-            return data[0].get("config_json")
-    
         return None
 
     def upsert_config(self, sb: Client, user_id: str, config_json: dict) -> None:
