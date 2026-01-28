@@ -336,7 +336,32 @@ elif page == "Scenario":
         scenario = st.session_state.get("scenario")
         if scenario:
             st.subheader("Scenario")
-            st.json(scenario)
+            
+            guest_comment = scenario.get("Guest comment", "").strip()
+            extra_services = scenario.get("Extra services", "(none)")
+            
+            # A clean, readable "task card"
+            with st.container(border=True):
+                st.markdown(f"### {scenario.get('Guest name', '')}")
+                if guest_comment:
+                    st.caption(f"💬 {guest_comment}")
+            
+                c1, c2, c3 = st.columns(3)
+                c1.metric("Room category", scenario.get("Room category", ""))
+                c2.metric("Guests", scenario.get("Number of guests", ""))
+                c3.metric("Nights", scenario.get("Nights", ""))
+            
+                d1, d2 = st.columns(2)
+                d1.markdown(f"**Arrival:** {scenario.get('Arrival', '')}")
+                d2.markdown(f"**Departure:** {scenario.get('Departure', '')}")
+            
+                st.markdown("**Extra services:**")
+                if extra_services and extra_services != "(none)":
+                    # show services as bullets
+                    for s in [x.strip() for x in extra_services.split(",") if x.strip()]:
+                        st.write(f"• {s}")
+                else:
+                    st.write("• None")
         else:
             st.info("Click **New task** to generate a scenario.")
 
