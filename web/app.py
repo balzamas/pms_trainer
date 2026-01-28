@@ -426,36 +426,113 @@ elif page == "Task history":
 
     if not rows:
         st.info("No tasks saved yet.")
-    else:
-        # Friendly table
-        df = pd.DataFrame(
-            [
-                {
-                    "finished_at": r.get("finished_at"),
-                    "booking_number": r.get("booking_number"),
-                    "generated_id": r.get("generated_id"),
-                    "followup": r.get("followup_text") or "",
-                }
-                for r in rows
-            ]
-        )
-        st.dataframe(df, use_container_width=True)
+        st.stop()
 
-        # Expand details + download from stored JSON
+    # Build a friendly table
+    def _date_only(ts: str) -> str:
+        # Supabase returns ISO strings like '2026-01-28T17:00:00+00:00'
+        try:
+            return str(pd.to_datetime(ts).date())
+        except Exception:
+            return str(ts)[:10]
+
+    table_rows = []
+    for r in rows:
+        sc = r.get("scenario_json", {}) or {}
+        table_rows.append(
+            {
+                "Finished": _date_only(r.get("finished_at", "")),
+                "Booking number": r.get("booking_number", ""),
+                "Guest name": sc.get("Guest name", ""),
+                "Room category": sc.get("Room category", ""),
+                "Follow-up": r.get("followup_text") or "",
+            }
+        )
+
+    df = pd.DataFrame(table_rows)
+
+    st.caption("Click a row to view the details below.")
+
+    event = st.dataframe(
+        df,
+        use_container_width=True,
+        hide_index=True,
+        on_select="rerun",
+        selection_mode="single-row",
+        key="tasks_table",
+    )
+
+    selected_idx = None
+    try:
+        selected_rows = event.selection.rows
+        if selected_rows:
+            selected_idx = int(selected_rows[0])
+    except Exception:
+        selected_idx = None
+
+    st.divider()
+    st.subheader("Details")
+
+    if selected_idx is None:
+        st.info("Select a row above to see details.")
+        st.stop()
+
+    r = rows[selected_idx]
+    scenario = r.get("scenario_json", {}) or {}
+    followup = r.get("followup_text") or ""
+    finished = _date_only(r.get("finished_at", ""))
+
+    # Non-tech friendly details (same style as Scenario page)
+    guest_comment = (scenario.get("Guest comment", "") or "").strip()
+    extra_services = scenario.get("Extra services", "(none)")
+
+    with st.container(border=True):
+        # Keep it compact (no big fonts, no emojis)
+        st.markdown(f"**Finished**  \n{finished}")
+        st.markdown(f"**Booking number**  \n{r.get('booking_number','')}")
         st.divider()
-        st.subheader("Details")
-        for r in rows[:10]:
-            with st.expander(f"{r.get('finished_at')} — BN {r.get('booking_number')} — {r.get('generated_id')}"):
-                st.json(r.get("scenario_json", {}))
-                txt = render_task_text(
-                    r.get("scenario_json", {}),
-                    r.get("booking_number", ""),
-                    r.get("generated_id", ""),
-                    r.get("followup_text"),
-                )
-                st.download_button(
-                    "Download TXT",
-                    data=txt,
-                    file_name=f"PMS_Task_{r.get('generated_id')}_BN-{r.get('booking_number')}.txt",
-                    key=f"dl_{r.get('id')}",
-                )
+
+        st.markdown(f"**Guest name**  \n{scenario.get('Guest name','')}")
+        if guest_comment:
+            st.caption(guest_comment)
+
+        st.divider()
+
+        def row_line(label, value):
+            c1, c2 = st.columns([1, 3])
+            c1.markdown(f"**{label}**")
+            c2.markdown(str(value) if value is not None else "")
+
+        row_line("Room category", scenario.get("Room category", ""))
+        row_line("Number of guests", scenario.get("Number of guests", ""))
+        row_line("Nights", scenario.get("Nights", ""))
+        row_line("Arrival", scenario.get("Arrival", ""))
+        row_line("Departure", scenario.get("Departure", ""))
+
+        st.divider()
+
+        st.markdown("**Extra services**")
+        if extra_services and extra_services != "(none)":
+            for s in [x.strip() for x in str(extra_services).split(",") if x.strip()]:
+                st.markdown(f"- {s}")
+        else:
+            st.markdown("- None")
+
+        if followup:
+            st.divider()
+            st.markdown("**Follow-up**")
+            st.markdown(f"- {followup}")
+
+    # Optional: allow downloading the original TXT for this task
+    txt = render_task_text(
+        scenario,
+        r.get("booking_number", ""),
+        r.get("generated_id", ""),
+        followup if followup else None,
+    )
+    st.download_button(
+        "Download TXT",
+        data=txt,
+        file_name=f"PMS_Task_{r.get('generated_id','task')}_BN-{r.get('booking_number','')}.txt",
+        key=f"dl_{r.get('id')}",
+    )
