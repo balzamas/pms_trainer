@@ -47,37 +47,34 @@ class DB:
     # ---------- configs ----------
     def get_config(self, sb: Client, user_id: str) -> Optional[dict]:
         try:
-            # simplest possible query
-            res = sb.table("configs").select("*").limit(1).execute()
+            res = (
+                sb.table("configs")
+                .select("config_json")
+                .eq("user_id", user_id)
+                .maybe_single()
+                .execute()
+            )
         except Exception as e:
-            raise RuntimeError(f"Supabase query exception: {repr(e)}")
+            raise RuntimeError(f"Supabase get_config failed: {repr(e)}")
     
         if res is None:
-            raise RuntimeError("Supabase query returned None (HTTP client issue or incompatible runtime).")
+            raise RuntimeError(
+                "Supabase get_config failed: execute() returned None. "
+                "This usually indicates a runtime/dependency HTTP issue."
+            )
     
         err = getattr(res, "error", None)
         if err:
-            raise RuntimeError(f"Supabase query error: {err}")
+            raise RuntimeError(f"Supabase get_config error: {err}")
     
-        # now try the real query
-        try:
-            res2 = sb.table("configs").select("config_json").eq("user_id", user_id).execute()
-        except Exception as e:
-            raise RuntimeError(f"Supabase real query exception: {repr(e)}")
-    
-        if res2 is None:
-            raise RuntimeError("Supabase real query returned None.")
-        err2 = getattr(res2, "error", None)
-        if err2:
-            raise RuntimeError(f"Supabase real query error: {err2}")
-    
-        data = getattr(res2, "data", None)
+        data = getattr(res, "data", None)
         if not data:
             return None
-        if isinstance(data, list):
-            return data[0].get("config_json") if data else None
+    
+        # maybe_single() returns dict
         if isinstance(data, dict):
             return data.get("config_json")
+    
         return None
 
     def upsert_config(self, sb: Client, user_id: str, config_json: dict) -> None:
