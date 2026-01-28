@@ -414,162 +414,162 @@ elif page == "Scenario":
             if followup:
                 st.warning(f"Follow-up: {followup}")
     
-    elif page == "Task history":
-        st.subheader("Task history (latest 50)")
-    
-        try:
-            sb = get_authed_sb()
-            rows = db.list_tasks(sb, st.session_state["user_id"], limit=50)
-        except Exception as e:
-            st.error(f"Could not load task history: {e}")
-            st.stop()
-    
-        if not rows:
-            st.info("No tasks saved yet.")
-            st.stop()
-    
-        # Hide OK tasks by default
-        hide_okay = st.checkbox("Hide tasks marked 'okay'", value=True)
-    
-        def _date_only(ts: str) -> str:
+        elif page == "Task history":
+            st.subheader("Task history (latest 50)")
+        
             try:
-                return str(pd.to_datetime(ts).date())
-            except Exception:
-                return str(ts)[:10]
-    
-        # Build table (and keep an index mapping back to the underlying row)
-        table_rows = []
-        row_map = []  # maps displayed row index -> original rows index
-    
-        for i, r in enumerate(rows):
-            status = (r.get("review_status") or "new").strip()
-            if hide_okay and status == "okay":
-                continue
-    
-            sc = r.get("scenario_json", {}) or {}
-            table_rows.append(
-                {
-                    "Finished": _date_only(r.get("finished_at", "")),
-                    "Status": status.replace("_", " "),
-                    "Booking number": r.get("booking_number", ""),
-                    "Guest name": sc.get("Guest name", ""),
-                    "Room category": sc.get("Room category", ""),
-                    "Follow-up": r.get("followup_text") or "",
-                }
-            )
-            row_map.append(i)
-    
-        if not table_rows:
-            st.info("Nothing to show with current filter.")
-            st.stop()
-    
-        df = pd.DataFrame(table_rows)
-    
-        st.caption("Click a row to view details and set trainer review below.")
-    
-        event = st.dataframe(
-            df,
-            use_container_width=True,
-            hide_index=True,
-            on_select="rerun",
-            selection_mode="single-row",
-            key="tasks_table",
-        )
-    
-        selected_display_idx = None
-        try:
-            selected_rows = event.selection.rows
-            if selected_rows:
-                selected_display_idx = int(selected_rows[0])
-        except Exception:
-            selected_display_idx = None
-    
-        st.divider()
-        st.subheader("Details")
-    
-        if selected_display_idx is None:
-            st.info("Select a row above to see details.")
-            st.stop()
-    
-        # Map back to the original row
-        r = rows[row_map[selected_display_idx]]
-        scenario = r.get("scenario_json", {}) or {}
-        followup = r.get("followup_text") or ""
-        finished = _date_only(r.get("finished_at", ""))
-    
-        # --- Trainer review control ---
-        task_id = r.get("id")
-        current_status = (r.get("review_status") or "new").strip()
-    
-        status_options = ["new", "okay", "needs_review"]
-        new_status = st.radio(
-            "Trainer review",
-            options=status_options,
-            index=status_options.index(current_status) if current_status in status_options else 0,
-            horizontal=True,
-            key=f"review_status_{task_id}",
-        )
-    
-        if new_status != current_status:
-            try:
-                sb2 = get_authed_sb()
-                db.update_task_review_status(sb2, task_id, new_status)
-                st.success("Saved trainer review.")
-                st.rerun()
+                sb = get_authed_sb()
+                rows = db.list_tasks(sb, st.session_state["user_id"], limit=50)
             except Exception as e:
-                st.error(f"Could not save review status: {e}")
-    
-        # --- Non-tech friendly details ---
-        guest_comment = (scenario.get("Guest comment", "") or "").strip()
-        extra_services = scenario.get("Extra services", "(none)")
-    
-        with st.container(border=True):
-            st.markdown(f"**Finished**  \n{finished}")
-            st.markdown(f"**Booking number**  \n{r.get('booking_number','')}")
-            st.markdown(f"**Status**  \n{new_status.replace('_', ' ')}")
+                st.error(f"Could not load task history: {e}")
+                st.stop()
+        
+            if not rows:
+                st.info("No tasks saved yet.")
+                st.stop()
+        
+            # Hide OK tasks by default
+            hide_okay = st.checkbox("Hide tasks marked 'okay'", value=True)
+        
+            def _date_only(ts: str) -> str:
+                try:
+                    return str(pd.to_datetime(ts).date())
+                except Exception:
+                    return str(ts)[:10]
+        
+            # Build table (and keep an index mapping back to the underlying row)
+            table_rows = []
+            row_map = []  # maps displayed row index -> original rows index
+        
+            for i, r in enumerate(rows):
+                status = (r.get("review_status") or "new").strip()
+                if hide_okay and status == "okay":
+                    continue
+        
+                sc = r.get("scenario_json", {}) or {}
+                table_rows.append(
+                    {
+                        "Finished": _date_only(r.get("finished_at", "")),
+                        "Status": status.replace("_", " "),
+                        "Booking number": r.get("booking_number", ""),
+                        "Guest name": sc.get("Guest name", ""),
+                        "Room category": sc.get("Room category", ""),
+                        "Follow-up": r.get("followup_text") or "",
+                    }
+                )
+                row_map.append(i)
+        
+            if not table_rows:
+                st.info("Nothing to show with current filter.")
+                st.stop()
+        
+            df = pd.DataFrame(table_rows)
+        
+            st.caption("Click a row to view details and set trainer review below.")
+        
+            event = st.dataframe(
+                df,
+                use_container_width=True,
+                hide_index=True,
+                on_select="rerun",
+                selection_mode="single-row",
+                key="tasks_table",
+            )
+        
+            selected_display_idx = None
+            try:
+                selected_rows = event.selection.rows
+                if selected_rows:
+                    selected_display_idx = int(selected_rows[0])
+            except Exception:
+                selected_display_idx = None
+        
             st.divider()
-    
-            st.markdown(f"**Guest name**  \n{scenario.get('Guest name','')}")
-            if guest_comment:
-                st.caption(guest_comment)
-    
-            st.divider()
-    
-            def row_line(label, value):
-                c1, c2 = st.columns([1, 3])
-                c1.markdown(f"**{label}**")
-                c2.markdown(str(value) if value is not None else "")
-    
-            row_line("Room category", scenario.get("Room category", ""))
-            row_line("Number of guests", scenario.get("Number of guests", ""))
-            row_line("Nights", scenario.get("Nights", ""))
-            row_line("Arrival", scenario.get("Arrival", ""))
-            row_line("Departure", scenario.get("Departure", ""))
-    
-            st.divider()
-    
-            st.markdown("**Extra services**")
-            if extra_services and extra_services != "(none)":
-                for s in [x.strip() for x in str(extra_services).split(",") if x.strip()]:
-                    st.markdown(f"- {s}")
-            else:
-                st.markdown("- None")
-    
-            if followup:
+            st.subheader("Details")
+        
+            if selected_display_idx is None:
+                st.info("Select a row above to see details.")
+                st.stop()
+        
+            # Map back to the original row
+            r = rows[row_map[selected_display_idx]]
+            scenario = r.get("scenario_json", {}) or {}
+            followup = r.get("followup_text") or ""
+            finished = _date_only(r.get("finished_at", ""))
+        
+            # --- Trainer review control ---
+            task_id = r.get("id")
+            current_status = (r.get("review_status") or "new").strip()
+        
+            status_options = ["new", "okay", "needs_review"]
+            new_status = st.radio(
+                "Trainer review",
+                options=status_options,
+                index=status_options.index(current_status) if current_status in status_options else 0,
+                horizontal=True,
+                key=f"review_status_{task_id}",
+            )
+        
+            if new_status != current_status:
+                try:
+                    sb2 = get_authed_sb()
+                    db.update_task_review_status(sb2, task_id, new_status)
+                    st.success("Saved trainer review.")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Could not save review status: {e}")
+        
+            # --- Non-tech friendly details ---
+            guest_comment = (scenario.get("Guest comment", "") or "").strip()
+            extra_services = scenario.get("Extra services", "(none)")
+        
+            with st.container(border=True):
+                st.markdown(f"**Finished**  \n{finished}")
+                st.markdown(f"**Booking number**  \n{r.get('booking_number','')}")
+                st.markdown(f"**Status**  \n{new_status.replace('_', ' ')}")
                 st.divider()
-                st.markdown("**Follow-up**")
-                st.markdown(f"- {followup}")
-    
-        # Download TXT still available
-        txt = render_task_text(
-            scenario,
-            r.get("booking_number", ""),
-            r.get("generated_id", ""),
-            followup if followup else None,
-        )
-        st.download_button(
-            "Download TXT",
-            data=txt,
-            file_name=f"PMS_Task_{r.get('generated_id','task')}_BN-{r.get('booking_number','')}.txt",
-            key=f"dl_{task_id}",
-        )
+        
+                st.markdown(f"**Guest name**  \n{scenario.get('Guest name','')}")
+                if guest_comment:
+                    st.caption(guest_comment)
+        
+                st.divider()
+        
+                def row_line(label, value):
+                    c1, c2 = st.columns([1, 3])
+                    c1.markdown(f"**{label}**")
+                    c2.markdown(str(value) if value is not None else "")
+        
+                row_line("Room category", scenario.get("Room category", ""))
+                row_line("Number of guests", scenario.get("Number of guests", ""))
+                row_line("Nights", scenario.get("Nights", ""))
+                row_line("Arrival", scenario.get("Arrival", ""))
+                row_line("Departure", scenario.get("Departure", ""))
+        
+                st.divider()
+        
+                st.markdown("**Extra services**")
+                if extra_services and extra_services != "(none)":
+                    for s in [x.strip() for x in str(extra_services).split(",") if x.strip()]:
+                        st.markdown(f"- {s}")
+                else:
+                    st.markdown("- None")
+        
+                if followup:
+                    st.divider()
+                    st.markdown("**Follow-up**")
+                    st.markdown(f"- {followup}")
+        
+            # Download TXT still available
+            txt = render_task_text(
+                scenario,
+                r.get("booking_number", ""),
+                r.get("generated_id", ""),
+                followup if followup else None,
+            )
+            st.download_button(
+                "Download TXT",
+                data=txt,
+                file_name=f"PMS_Task_{r.get('generated_id','task')}_BN-{r.get('booking_number','')}.txt",
+                key=f"dl_{task_id}",
+            )
