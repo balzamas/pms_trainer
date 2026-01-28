@@ -205,14 +205,19 @@ def config_editor(cfg: dict) -> tuple[dict, bool]:
                 "max_guests": st.column_config.NumberColumn("Max guests", min_value=1, step=1),
             },
         )
-        cfg["guests"] = guests_df.fillna("").to_dict(orient="records")
+        guests_df["full_name"] = guests_df["full_name"].fillna("").astype(str)
+        guests_df["comment"] = guests_df.get("comment", "").fillna("").astype(str)
+        guests_df["min_guests"] = pd.to_numeric(guests_df["min_guests"], errors="coerce").fillna(1).astype(int)
+        guests_df["max_guests"] = pd.to_numeric(guests_df["max_guests"], errors="coerce").fillna(99).astype(int)
+        
+        cfg["guests"] = guests_df.to_dict(orient="records")
 
     # --- Room categories ---
     with tabs[2]:
         cats_df = pd.DataFrame(cfg.get("room_categories", []))
         if cats_df.empty:
-            cats_df = pd.DataFrame([{"name": "", "min_guests": 1, "max_guests": 1}])
-
+            cats_df = pd.DataFrame([{"name": "", "min_guests": 1, "max_guests": 99}])
+    
         cats_df = st.data_editor(
             cats_df,
             use_container_width=True,
@@ -223,7 +228,13 @@ def config_editor(cfg: dict) -> tuple[dict, bool]:
                 "max_guests": st.column_config.NumberColumn("Max guests", min_value=1, step=1),
             },
         )
-        cfg["room_categories"] = cats_df.fillna("").to_dict(orient="records")
+    
+        # ✅ keep numeric columns numeric
+        cats_df["name"] = cats_df["name"].fillna("").astype(str)
+        cats_df["min_guests"] = pd.to_numeric(cats_df["min_guests"], errors="coerce").fillna(1).astype(int)
+        cats_df["max_guests"] = pd.to_numeric(cats_df["max_guests"], errors="coerce").fillna(1).astype(int)
+    
+        cfg["room_categories"] = cats_df.to_dict(orient="records")
 
     # --- Services & follow-ups ---
     with tabs[3]:
