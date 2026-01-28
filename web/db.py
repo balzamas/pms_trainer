@@ -47,22 +47,43 @@ class DB:
     # ---------- configs ----------
 
     def get_config(self, sb: Client, user_id: str) -> Optional[dict]:
-        res = (
-            sb.table("configs")
-            .select("config_json")
-            .eq("user_id", user_id)
-            .maybe_single()
-            .execute()
-        )
-        if not res.data:
+        try:
+            res = (
+                sb.table("configs")
+                .select("config_json")
+                .eq("user_id", user_id)
+                .maybe_single()
+                .execute()
+            )
+        except Exception as e:
+            raise RuntimeError(f"Supabase get_config failed: {e}")
+    
+        if res is None:
+            raise RuntimeError(
+                "Supabase get_config failed: execute() returned None. "
+                "Common causes: table missing, RLS/policy issue, or invalid session."
+            )
+    
+        # supabase-py typically returns res.data = dict or None
+        if not getattr(res, "data", None):
             return None
-        return res.data["config_json"]
+    
+        return res.data.get("config_json")
 
     def upsert_config(self, sb: Client, user_id: str, config_json: dict) -> None:
-        sb.table("configs").upsert(
-            {"user_id": user_id, "config_json": config_json},
-            on_conflict="user_id",
-        ).execute()
+        try:
+            res = sb.table("configs").upsert(
+                {"user_id": user_id, "config_json": config_json},
+                on_conflict="user_id",
+            ).execute()
+        except Exception as e:
+            raise RuntimeError(f"Supabase upsert_config failed: {e}")
+    
+        if res is None:
+            raise RuntimeError(
+                "Supabase upsert_config failed: execute() returned None. "
+                "Common causes: table missing, RLS/policy issue, or invalid session."
+            )
 
     # ---------- tasks ----------
 
