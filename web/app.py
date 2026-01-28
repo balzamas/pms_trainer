@@ -136,6 +136,15 @@ def get_authed_sb():
 
 def load_or_init_config() -> dict:
     sb = get_authed_sb()
+    st.write("DEBUG user_id:", st.session_state["user_id"])
+    st.write("DEBUG token prefix:", st.session_state["access_token"][:16])
+    
+    try:
+        u = sb.auth.get_user()
+        st.write("DEBUG supabase user:", getattr(u, "user", None).id if getattr(u, "user", None) else u)
+    except Exception as e:
+        st.error(f"DEBUG auth.get_user failed: {repr(e)}")
+        st.stop()
     user_id = st.session_state["user_id"]
 
     cfg = db.get_config(sb, user_id)
