@@ -1,3 +1,4 @@
 
 v0.1.2
 FIX: after save a new task can be generated
+FEATURE: show pop up if config.json is broken, including line
