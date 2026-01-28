@@ -45,19 +45,31 @@ from config_model import default_config, normalize_config, validate_config
 def _set_session_from_auth(auth_res) -> None:
     """
     Stores tokens/user in session_state.
-    supabase-py returns different shapes depending on version,
-    but session+user is typically accessible as .session / .user.
+    Works with supabase-py v2 where auth responses are objects (AuthResponse),
+    and also tolerates dict-like shapes.
     """
-    session = getattr(auth_res, "session", None) or auth_res.get("session")
-    user = getattr(auth_res, "user", None) or auth_res.get("user")
+    def pick(obj, attr: str):
+        if obj is None:
+            return None
+        # object attribute
+        val = getattr(obj, attr, None)
+        if val is not None:
+            return val
+        # dict fallback
+        if isinstance(obj, dict):
+            return obj.get(attr)
+        return None
 
-    if not session or not user:
-        # Some versions pack in auth_res.data
-        data = getattr(auth_res, "data", None) or auth_res.get("data") or {}
-        session = session or data.get("session")
-        user = user or data.get("user")
+    session = pick(auth_res, "session")
+    user = pick(auth_res, "user")
 
-    if not session or not user:
+    # Some versions wrap in `.data`
+    if session is None or user is None:
+        data = pick(auth_res, "data")
+        session = session or pick(data, "session")
+        user = user or pick(data, "user")
+
+    if session is None or user is None:
         raise RuntimeError("Could not read session/user from Supabase auth response.")
 
     st.session_state["access_token"] = session.access_token
