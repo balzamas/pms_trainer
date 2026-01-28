@@ -45,30 +45,46 @@ class DB:
         return sb
 
     # ---------- configs ----------
-
     def get_config(self, sb: Client, user_id: str) -> Optional[dict]:
-        try:
-            res = (
-                sb.table("configs")
-                .select("config_json")
-                .eq("user_id", user_id)
-                .maybe_single()
-                .execute()
-            )
-        except Exception as e:
-            raise RuntimeError(f"Supabase get_config failed: {e}")
+    try:
+    q = sb.table("configs").select("config_json").eq("user_id", user_id).maybe_single()
+    res = q.execute()
+    except Exception as e:
+    raise RuntimeError(f"Supabase get_config exception: {repr(e)}")
     
-        if res is None:
-            raise RuntimeError(
-                "Supabase get_config failed: execute() returned None. "
-                "Common causes: table missing, RLS/policy issue, or invalid session."
-            )
     
-        # supabase-py typically returns res.data = dict or None
-        if not getattr(res, "data", None):
-            return None
+    # Debug: force visibility
+    if res is None:
+    # This strongly hints at a client/config issue rather than "no rows"
+    raise RuntimeError(
+    "Supabase get_config failed: execute() returned None.\n"
+    "Check: SUPABASE_URL/KEY correct, tables exist, and RLS policies.\n"
+    "Also verify your supabase-py version matches requirements."
+    )
     
-        return res.data.get("config_json")
+    
+    # supabase-py response usually has: data, error, status_code, count
+    err = getattr(res, "error", None)
+    if err:
+    raise RuntimeError(f"Supabase get_config error: {err}")
+    
+    
+    data = getattr(res, "data", None)
+    if not data:
+    return None
+    
+    
+    # maybe_single() returns dict, not list
+    if isinstance(data, dict):
+    return data.get("config_json")
+    
+    
+    # fallback if it returns list
+    if isinstance(data, list) and data:
+    return data[0].get("config_json")
+    
+    
+    return None
 
     def upsert_config(self, sb: Client, user_id: str, config_json: dict) -> None:
         try:
