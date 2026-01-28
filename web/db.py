@@ -84,13 +84,13 @@ class DB:
                 on_conflict="user_id",
             ).execute()
         except Exception as e:
-            raise RuntimeError(f"Supabase upsert_config failed: {e}")
+            raise RuntimeError(f"Supabase upsert_config failed: {repr(e)}")
     
         if res is None:
-            raise RuntimeError(
-                "Supabase upsert_config failed: execute() returned None. "
-                "Common causes: table missing, RLS/policy issue, or invalid session."
-            )
+            raise RuntimeError("Supabase upsert_config failed: execute() returned None.")
+        err = getattr(res, "error", None)
+        if err:
+            raise RuntimeError(f"Supabase upsert_config error: {err}")
 
     # ---------- tasks ----------
 
