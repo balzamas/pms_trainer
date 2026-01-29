@@ -148,7 +148,7 @@ def generate_breakfast_service(cfg: dict, guest_count: int) -> Optional[str]:
         breakfast_count = guest_count if random.random() <= p_full else random.randint(1, guest_count - 1)
 
     chosen = [random.choice(types) for _ in range(breakfast_count)]
-    return f"Breakfast: {format_breakfast_counts(chosen)}"
+    return f"{format_breakfast_counts(chosen)}"
 
 
 def generate_scenario(cfg: dict) -> dict:
