@@ -46,8 +46,9 @@ def default_config() -> dict:
         ],
 
         "follow_up_tasks": [
-            "Check payment status",
-            "Send pre-arrival email",
+            "Extend booking by one night",
+            "Add another room or bed",
+            "Move booking to another room category"
         ],
 
         "breakfast_policy": {
