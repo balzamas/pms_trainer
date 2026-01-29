@@ -7,6 +7,38 @@ from datetime import date, datetime, timedelta
 from typing import Optional
 
 
+# -------------------- helpers --------------------
+
+def parse_category_extras(value) -> list[str]:
+    """
+    Accepts either:
+      - a string like "Baby bed; Extra bed; 2x Children"
+      - a list like ["Baby bed", "Extra bed"]
+    Returns a clean list of strings.
+    """
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return [str(x).strip() for x in value if str(x).strip()]
+    if isinstance(value, str):
+        return [x.strip() for x in value.split(";") if x.strip()]
+    return []
+
+
+def unique_keep_order(items: list[str]) -> list[str]:
+    seen = set()
+    out = []
+    for s in items:
+        s = str(s).strip()
+        if not s:
+            continue
+        if s in seen:
+            continue
+        seen.add(s)
+        out.append(s)
+    return out
+
+
 # -------------------- scenario generation (from main.py) --------------------
 
 def choose_compatible_guest_category_and_count(cfg: dict):
@@ -124,7 +156,13 @@ def generate_scenario(cfg: dict) -> dict:
     arrival, departure, nights = random_dates(cfg)
 
     max_services = int(cfg.get("max_services", 3))
+
+    # ✅ One pool for extras: global extras + room-category-specific extras
     services_pool = list(cfg.get("extra_services", []))
+    services_pool += parse_category_extras(category.get("category_extras", ""))
+
+    # (Optional) remove duplicates while keeping order
+    services_pool = unique_keep_order(services_pool)
 
     num_services = random.randint(0, min(max_services, len(services_pool))) if services_pool else 0
     other_services = random.sample(services_pool, k=num_services) if num_services > 0 else []
