@@ -22,12 +22,6 @@ if not SUPABASE_URL or not SUPABASE_ANON_KEY:
 
 db = DB(SUPABASE_URL, SUPABASE_ANON_KEY)
 
-# ---- You should refactor your existing logic into scenario.py ----
-# Required functions from scenario.py:
-#   - generate_scenario(cfg: dict) -> dict
-#   - should_generate_followup(cfg: dict) -> bool
-#   - pick_random_followup(cfg: dict) -> Optional[str]
-#   - render_task_text(scenario: dict, booking_number: str, generated_id: str, followup: Optional[str]) -> str
 from scenario import (
     generate_scenario,
     should_generate_followup,
@@ -35,8 +29,6 @@ from scenario import (
     render_task_text,
 )
 
-# ---- Config defaults/validation ----
-# You can use the config_model.py from my previous message.
 from config_model import default_config, normalize_config, validate_config
 
 
@@ -51,11 +43,9 @@ def _set_session_from_auth(auth_res) -> None:
     def pick(obj, attr: str):
         if obj is None:
             return None
-        # object attribute
         val = getattr(obj, attr, None)
         if val is not None:
             return val
-        # dict fallback
         if isinstance(obj, dict):
             return obj.get(attr)
         return None
@@ -63,7 +53,6 @@ def _set_session_from_auth(auth_res) -> None:
     session = pick(auth_res, "session")
     user = pick(auth_res, "user")
 
-    # Some versions wrap in `.data`
     if session is None or user is None:
         data = pick(auth_res, "data")
         session = session or pick(data, "session")
@@ -79,7 +68,11 @@ def _set_session_from_auth(auth_res) -> None:
 
 
 def is_logged_in() -> bool:
-    return bool(st.session_state.get("access_token") and st.session_state.get("refresh_token") and st.session_state.get("user_id"))
+    return bool(
+        st.session_state.get("access_token")
+        and st.session_state.get("refresh_token")
+        and st.session_state.get("user_id")
+    )
 
 
 def logout():
@@ -88,6 +81,12 @@ def logout():
     except Exception:
         pass
     for k in ["access_token", "refresh_token", "user_id", "user_email", "cfg", "scenario", "generated_id"]:
+        st.session_state.pop(k, None)
+    # also clear editor states
+    for k in [
+        "guests_editor_df",
+        "roomcats_editor_df",
+    ]:
         st.session_state.pop(k, None)
     st.rerun()
 
@@ -115,8 +114,6 @@ def login_ui():
         if st.button("Create account", type="primary"):
             try:
                 res = db.sign_up(email2.strip(), password2)
-                # Depending on Supabase settings, email confirmation may be required.
-                # If confirmation is required, the session may be None.
                 session = getattr(res, "session", None) or res.get("session")
                 if session:
                     _set_session_from_auth(res)
@@ -131,18 +128,20 @@ def login_ui():
 # -------------------- DB-backed config --------------------
 
 def get_authed_sb():
+    # NOTE: if your Supabase uses refresh-token rotation, consider updating
+    # st.session_state tokens inside db.authed_client / get_authed_sb as discussed.
     return db.authed_client(st.session_state["access_token"], st.session_state["refresh_token"])
 
 
 def load_or_init_config() -> dict:
     sb = get_authed_sb()
 
-    
     try:
-        u = sb.auth.get_user()
+        _ = sb.auth.get_user()
     except Exception as e:
         st.error(f"DEBUG auth.get_user failed: {repr(e)}")
         st.stop()
+
     user_id = st.session_state["user_id"]
 
     cfg = db.get_config(sb, user_id)
@@ -159,7 +158,8 @@ def save_config(cfg: dict) -> None:
     db.upsert_config(sb, user_id, cfg)
 
 
-# -------------------- Option B config editor UI --------------------
+# -------------------- Config editor helpers --------------------
+
 def _ensure_df(value, columns: list[str], empty_row: dict) -> pd.DataFrame:
     """Convert whatever is in session_state into a clean DataFrame."""
     if isinstance(value, pd.DataFrame):
@@ -167,7 +167,6 @@ def _ensure_df(value, columns: list[str], empty_row: dict) -> pd.DataFrame:
     elif isinstance(value, list):
         df = pd.DataFrame(value)
     elif isinstance(value, dict):
-        # could be dict of rows or dict of columns; both handled by DataFrame()
         df = pd.DataFrame(value)
     else:
         df = pd.DataFrame([])
@@ -175,30 +174,23 @@ def _ensure_df(value, columns: list[str], empty_row: dict) -> pd.DataFrame:
     if df.empty:
         df = pd.DataFrame([empty_row])
 
-    # force expected columns + order
     for c in columns:
         if c not in df.columns:
             df[c] = None
     df = df.reindex(columns=columns)
     return df
 
-def _apply_row_defaults(df: pd.DataFrame, key_col: str, defaults: dict) -> pd.DataFrame:
-    """
-    For rows where key_col has a value (e.g. name/full_name), ensure defaults for missing fields.
-    This makes newly added rows get min/max immediately (instead of None).
-    """
-    out = df.copy()
 
+def _apply_row_defaults(df: pd.DataFrame, key_col: str, defaults: dict) -> pd.DataFrame:
+    out = df.copy()
     if key_col not in out.columns:
         out[key_col] = ""
 
-    # Only apply defaults on "real" rows (where name/full_name is not empty)
     key_has_value = out[key_col].fillna("").astype(str).str.strip().ne("")
 
     for col, default_value in defaults.items():
         if col not in out.columns:
             out[col] = None
-        # fill only where row is "real" and value is missing
         out.loc[key_has_value & out[col].isna(), col] = default_value
 
     return out
@@ -219,7 +211,13 @@ def config_editor(cfg: dict) -> tuple[dict, bool]:
         with col1:
             bw["earliest_arrival"] = st.text_input("Earliest arrival (YYYY-MM-DD)", bw.get("earliest_arrival", ""))
             stay["min"] = st.number_input("Stay min nights", min_value=1, step=1, value=int(stay.get("min", 1)))
-            cfg["max_services"] = st.number_input("Max extra services", min_value=0, step=1, value=int(cfg.get("max_services", 3)))
+            cfg["max_services"] = st.number_input(
+                "Max extra services (incl. category extras)",
+                min_value=0,
+                step=1,
+                value=int(cfg.get("max_services", 3)),
+                help="Applies to the combined pool of global extras + room-category extras.",
+            )
         with col2:
             bw["latest_arrival"] = st.text_input("Latest arrival (YYYY-MM-DD)", bw.get("latest_arrival", ""))
             stay["max"] = st.number_input("Stay max nights", min_value=1, step=1, value=int(stay.get("max", 5)))
@@ -233,9 +231,9 @@ def config_editor(cfg: dict) -> tuple[dict, bool]:
     # --- Guests ---
     with tabs[1]:
         st.caption("Add/edit guests. Click **Apply changes** when done editing.")
-    
+
         GUESTS_KEY = "guests_editor_df"
-    
+
         if GUESTS_KEY not in st.session_state:
             base = cfg.get("guests", [])
             st.session_state[GUESTS_KEY] = _ensure_df(
@@ -243,7 +241,7 @@ def config_editor(cfg: dict) -> tuple[dict, bool]:
                 columns=["full_name", "comment", "min_guests", "max_guests"],
                 empty_row={"full_name": "", "comment": "", "min_guests": 1, "max_guests": 99},
             )
-    
+
         with st.form("guests_form"):
             edited = st.data_editor(
                 st.session_state[GUESTS_KEY],
@@ -257,22 +255,21 @@ def config_editor(cfg: dict) -> tuple[dict, bool]:
                 },
             )
             apply_guests = st.form_submit_button("Apply changes")
-    
+
         if apply_guests:
             edited = _apply_row_defaults(edited, "full_name", {"min_guests": 1, "max_guests": 99})
             edited["full_name"] = edited["full_name"].fillna("").astype(str)
             if "comment" not in edited.columns:
                 edited["comment"] = ""
             edited["comment"] = edited["comment"].fillna("").astype(str)
-    
+
             edited["min_guests"] = pd.to_numeric(edited["min_guests"], errors="coerce").fillna(1).astype(int)
             edited["max_guests"] = pd.to_numeric(edited["max_guests"], errors="coerce").fillna(99).astype(int)
-    
+
             st.session_state[GUESTS_KEY] = edited
             cfg["guests"] = edited.to_dict(orient="records")
             st.success("Guests updated in this config (remember to click **Save config**).")
         else:
-            # keep cfg in sync with last applied state
             guests_cfg = st.session_state[GUESTS_KEY].copy()
             guests_cfg = _apply_row_defaults(guests_cfg, "full_name", {"min_guests": 1, "max_guests": 99})
             guests_cfg["full_name"] = guests_cfg["full_name"].fillna("").astype(str)
@@ -286,17 +283,18 @@ def config_editor(cfg: dict) -> tuple[dict, bool]:
     # --- Room categories ---
     with tabs[2]:
         st.caption("Add/edit room categories. Click **Apply changes** when done editing.")
-    
+        st.caption("Category extras will be mixed into the same 'Extra services' list during scenario generation.")
+
         ROOMCATS_KEY = "roomcats_editor_df"
-    
+
         if ROOMCATS_KEY not in st.session_state:
             base = cfg.get("room_categories", [])
             st.session_state[ROOMCATS_KEY] = _ensure_df(
                 base,
-                columns=["name", "min_guests", "max_guests"],
-                empty_row={"name": "", "min_guests": 1, "max_guests": 99},
+                columns=["name", "min_guests", "max_guests", "category_extras"],
+                empty_row={"name": "", "min_guests": 1, "max_guests": 99, "category_extras": ""},
             )
-    
+
         with st.form("roomcats_form"):
             edited = st.data_editor(
                 st.session_state[ROOMCATS_KEY],
@@ -306,16 +304,23 @@ def config_editor(cfg: dict) -> tuple[dict, bool]:
                     "name": st.column_config.TextColumn("Category name", required=True),
                     "min_guests": st.column_config.NumberColumn("Min guests", min_value=1, step=1),
                     "max_guests": st.column_config.NumberColumn("Max guests", min_value=1, step=1),
+                    "category_extras": st.column_config.TextColumn(
+                        "Category extras (use ';')",
+                        help="Optional. Example: Baby bed; Extra bed; 2x Children",
+                    ),
                 },
             )
             apply_roomcats = st.form_submit_button("Apply changes")
-    
+
         if apply_roomcats:
             edited = _apply_row_defaults(edited, "name", {"min_guests": 1, "max_guests": 99})
             edited["name"] = edited["name"].fillna("").astype(str)
             edited["min_guests"] = pd.to_numeric(edited["min_guests"], errors="coerce").fillna(1).astype(int)
             edited["max_guests"] = pd.to_numeric(edited["max_guests"], errors="coerce").fillna(99).astype(int)
-    
+            if "category_extras" not in edited.columns:
+                edited["category_extras"] = ""
+            edited["category_extras"] = edited["category_extras"].fillna("").astype(str)
+
             st.session_state[ROOMCATS_KEY] = edited
             cfg["room_categories"] = edited.to_dict(orient="records")
             st.success("Room categories updated in this config (remember to click **Save config**).")
@@ -325,19 +330,23 @@ def config_editor(cfg: dict) -> tuple[dict, bool]:
             cats_cfg["name"] = cats_cfg["name"].fillna("").astype(str)
             cats_cfg["min_guests"] = pd.to_numeric(cats_cfg["min_guests"], errors="coerce").fillna(1).astype(int)
             cats_cfg["max_guests"] = pd.to_numeric(cats_cfg["max_guests"], errors="coerce").fillna(99).astype(int)
+            if "category_extras" not in cats_cfg.columns:
+                cats_cfg["category_extras"] = ""
+            cats_cfg["category_extras"] = cats_cfg["category_extras"].fillna("").astype(str)
+
             cfg["room_categories"] = cats_cfg.to_dict(orient="records")
 
     # --- Services & follow-ups ---
     with tabs[3]:
         col1, col2 = st.columns(2)
         with col1:
-            st.subheader("Extra services")
+            st.subheader("Extra services (global)")
             services_txt = st.text_area(
                 "One per line",
                 "\n".join(cfg.get("extra_services", [])),
                 height=240,
                 key="cfg_extra_services_textarea",
-                )
+            )
             cfg["extra_services"] = [s.strip() for s in services_txt.splitlines() if s.strip()]
         with col2:
             st.subheader("Follow-up tasks")
@@ -346,22 +355,32 @@ def config_editor(cfg: dict) -> tuple[dict, bool]:
                 "\n".join(cfg.get("follow_up_tasks", [])),
                 height=240,
                 key="cfg_followups_textarea",
-                )   
+            )
             cfg["follow_up_tasks"] = [s.strip() for s in followups_txt.splitlines() if s.strip()]
 
     # --- Breakfast ---
     with tabs[4]:
         pol = dict(cfg.get("breakfast_policy", {}))
         pol["enabled"] = st.checkbox("Enable breakfast", bool(pol.get("enabled", False)))
-        pol["probability_any_breakfast"] = st.slider("Probability any breakfast", 0.0, 1.0, float(pol.get("probability_any_breakfast", 0.7)))
-        pol["probability_full_group_if_any"] = st.slider("Probability full group if any", 0.0, 1.0, float(pol.get("probability_full_group_if_any", 0.7)))
+        pol["probability_any_breakfast"] = st.slider(
+            "Probability any breakfast",
+            0.0,
+            1.0,
+            float(pol.get("probability_any_breakfast", 0.7)),
+        )
+        pol["probability_full_group_if_any"] = st.slider(
+            "Probability full group if any",
+            0.0,
+            1.0,
+            float(pol.get("probability_full_group_if_any", 0.7)),
+        )
 
         types_txt = st.text_area(
-                "Breakfast types (one per line)",
-                "\n".join(cfg.get("breakfast_types", [])),
-                height=160,
-                key="cfg_breakfast_types_textarea",
-            )
+            "Breakfast types (one per line)",
+            "\n".join(cfg.get("breakfast_types", [])),
+            height=160,
+            key="cfg_breakfast_types_textarea",
+        )
         cfg["breakfast_types"] = [t.strip() for t in types_txt.splitlines() if t.strip()]
         cfg["breakfast_policy"] = pol
 
@@ -384,13 +403,11 @@ if not is_logged_in():
     login_ui()
     st.stop()
 
-# Top bar
 with st.sidebar:
     st.write(f"**Logged in:** {st.session_state.get('user_email', '')}")
     if st.button("Logout"):
         logout()
 
-# Load config once per session (or when missing)
 if "cfg" not in st.session_state:
     st.session_state["cfg"] = load_or_init_config()
 
@@ -406,16 +423,11 @@ if page == "Config":
     if save_clicked:
         try:
             save_config(updated_cfg)
-    
+
             # Reset editor state so next render seeds from saved cfg
-            st.session_state.pop("guests_editor", None)  # old broken key (safe to keep)
             st.session_state.pop("guests_editor_df", None)
-            st.session_state.pop("guests_editor_widget", None)
-    
-            st.session_state.pop("roomcats_editor", None)  # old broken key (safe to keep)
             st.session_state.pop("roomcats_editor_df", None)
-            st.session_state.pop("roomcats_editor_widget", None)
-    
+
             st.success("Saved config to database.")
             st.rerun()
         except Exception as e:
@@ -433,37 +445,33 @@ elif page == "Scenario":
         scenario = st.session_state.get("scenario")
         if scenario:
             st.subheader("Scenario")
-            
+
             guest_comment = scenario.get("Guest comment", "").strip()
             extra_services = scenario.get("Extra services", "(none)")
-            
+
             with st.container(border=True):
-            
-                # Guest
                 st.markdown(f"**Guest name**  \n{scenario.get('Guest name', '')}")
                 if guest_comment:
                     st.caption(guest_comment)
-            
+
                 st.divider()
-            
-                # Core booking info (label-value rows)
+
                 def row(label, value):
                     c1, c2 = st.columns([1, 3])
                     c1.markdown(f"**{label}**")
                     c2.markdown(str(value) if value is not None else "")
-            
+
                 row("Room category", scenario.get("Room category", ""))
                 row("Number of guests", scenario.get("Number of guests", ""))
                 row("Nights", scenario.get("Nights", ""))
                 row("Arrival", scenario.get("Arrival", ""))
                 row("Departure", scenario.get("Departure", ""))
-            
+
                 st.divider()
-            
-                # Extra services
+
                 st.markdown("**Extra services**")
                 if extra_services and extra_services != "(none)":
-                    for s in [x.strip() for x in extra_services.split(",") if x.strip()]:
+                    for s in [x.strip() for x in str(extra_services).split(",") if x.strip()]:
                         st.markdown(f"- {s}")
                 else:
                     st.markdown("- None")
@@ -478,10 +486,9 @@ elif page == "Scenario":
 
             submitted = st.form_submit_button(
                 "Mark finished",
-                disabled=not st.session_state.get("scenario")
+                disabled=not st.session_state.get("scenario"),
             )
 
-        # handle submit OUTSIDE the form block (cleaner Streamlit pattern)
         if submitted:
             if not booking_number.strip():
                 st.error("Please enter a booking number.")
@@ -520,7 +527,8 @@ elif page == "Scenario":
             )
 
             if followup:
-                st.warning(f"Follow-up: {followup}")    
+                st.warning(f"Follow-up: {followup}")
+
 elif page == "Task history":
     st.subheader("Task history (latest 50)")
 
@@ -535,7 +543,6 @@ elif page == "Task history":
         st.info("No tasks saved yet.")
         st.stop()
 
-    # Hide OK tasks by default
     hide_okay = st.checkbox("Hide tasks marked 'okay'", value=True)
 
     def _date_only(ts: str) -> str:
@@ -544,9 +551,8 @@ elif page == "Task history":
         except Exception:
             return str(ts)[:10]
 
-    # Build table (and keep an index mapping back to the underlying row)
     table_rows = []
-    row_map = []  # maps displayed row index -> original rows index
+    row_map = []
 
     for i, r in enumerate(rows):
         status = (r.get("review_status") or "new").strip()
@@ -598,13 +604,11 @@ elif page == "Task history":
         st.info("Select a row above to see details.")
         st.stop()
 
-    # Map back to the original row
     r = rows[row_map[selected_display_idx]]
     scenario = r.get("scenario_json", {}) or {}
     followup = r.get("followup_text") or ""
     finished = _date_only(r.get("finished_at", ""))
 
-    # --- Trainer review control ---
     task_id = r.get("id")
     current_status = (r.get("review_status") or "new").strip()
 
@@ -626,7 +630,6 @@ elif page == "Task history":
         except Exception as e:
             st.error(f"Could not save review status: {e}")
 
-    # --- Non-tech friendly details ---
     guest_comment = (scenario.get("Guest comment", "") or "").strip()
     extra_services = scenario.get("Extra services", "(none)")
 
@@ -667,7 +670,6 @@ elif page == "Task history":
             st.markdown("**Follow-up**")
             st.markdown(f"- {followup}")
 
-    # Download TXT still available
     txt = render_task_text(
         scenario,
         r.get("booking_number", ""),
