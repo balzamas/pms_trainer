@@ -335,6 +335,8 @@ if page == "Config":
     if save_clicked:
         try:
             save_config(updated_cfg)
+            st.session_state.pop("guests_df", None)
+            st.session_state.pop("cats_df", None)
             st.success("Saved config to database.")
         except Exception as e:
             st.error(f"Save failed: {e}")
