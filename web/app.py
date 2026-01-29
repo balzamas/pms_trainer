@@ -213,7 +213,7 @@ def config_editor(cfg: dict) -> tuple[dict, bool]:
     cfg = normalize_config(cfg)
     save_clicked = False
 
-    tabs = st.tabs(["General", "Guests", "Room categories", "Services & follow-ups", "Breakfast"])
+    tabs = st.tabs(["General", "Guest profiles", "Room types", "Requests & follow-ups", "Breakfast"])
 
     # --- General ---
     with tabs[0]:
@@ -225,7 +225,7 @@ def config_editor(cfg: dict) -> tuple[dict, bool]:
             bw["earliest_arrival"] = st.text_input("Earliest arrival (YYYY-MM-DD)", bw.get("earliest_arrival", ""))
             stay["min"] = st.number_input("Stay min nights", min_value=1, step=1, value=int(stay.get("min", 1)))
             cfg["max_services"] = st.number_input(
-                "Max extra services (incl. category extras)",
+                "Max requests & extras",
                 min_value=0,
                 step=1,
                 value=int(cfg.get("max_services", 3)),
@@ -296,7 +296,7 @@ def config_editor(cfg: dict) -> tuple[dict, bool]:
     # --- Room categories ---
     with tabs[2]:
         st.caption("Add/edit room categories. Click **Apply changes** when done editing.")
-        st.caption("Category extras will be mixed into the same 'Extra services' list during scenario generation.")
+        st.caption("Category extras will be mixed into the same 'Requests & extras' list during scenario generation.")
 
         ROOMCATS_KEY = "roomcats_editor_df"
 
@@ -353,7 +353,7 @@ def config_editor(cfg: dict) -> tuple[dict, bool]:
     with tabs[3]:
         col1, col2 = st.columns(2)
         with col1:
-            st.subheader("Extra services (global)")
+            st.subheader("Requests & extras (global)")
             services_txt = st.text_area(
                 "One per line",
                 "\n".join(cfg.get("extra_services", [])),
@@ -450,17 +450,17 @@ elif page == "Scenario":
     col1, col2 = st.columns([2, 1], gap="large")
 
     with col1:
-        if st.button("New task", type="primary"):
+        if st.button("New scenario", type="primary"):
             st.session_state["scenario"] = generate_scenario(cfg)
             st.session_state["generated_id"] = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             st.session_state["followup"] = None
 
         scenario = st.session_state.get("scenario")
         if scenario:
-            st.subheader("Scenario")
+            st.subheader("Scenario details")
 
             guest_comment = scenario.get("Guest comment", "").strip()
-            extra_services = scenario.get("Extra services", "(none)")
+            extra_services = scenario.get("Requests & extras", "(none)")
 
             with st.container(border=True):
                 st.markdown(f"**Guest name**  \n{scenario.get('Guest name', '')}")
@@ -474,7 +474,7 @@ elif page == "Scenario":
                     c1.markdown(f"**{label}**")
                     c2.markdown(str(value) if value is not None else "")
 
-                row("Room category", scenario.get("Room category", ""))
+                row("Room type", scenario.get("Room type", ""))
                 row("Number of guests", scenario.get("Number of guests", ""))
                 row("Nights", scenario.get("Nights", ""))
                 row("Arrival", scenario.get("Arrival", ""))
@@ -482,7 +482,7 @@ elif page == "Scenario":
 
                 st.divider()
 
-                st.markdown("**Extra services/requests**")
+                st.markdown("**Requests & extras**")
                 if extra_services and extra_services != "(none)":
                     for s in [x.strip() for x in str(extra_services).split(",") if x.strip()]:
                         st.markdown(f"- {s}")
@@ -492,7 +492,7 @@ elif page == "Scenario":
             st.info("Click **New task** to generate a scenario.")
 
     with col2:
-        st.subheader("Completion")
+        st.subheader("Finish")
 
         with st.form("finish_task"):
             booking_number = st.text_input("Booking number")
@@ -534,7 +534,7 @@ elif page == "Scenario":
             )
 
             st.download_button(
-                "Download task TXT",
+                "Download scenario (TXT)",
                 data=txt,
                 file_name=f"PMS_Task_{st.session_state['generated_id']}_BN-{booking_number.strip()}.txt",
             )
@@ -579,7 +579,7 @@ elif page == "Task history":
                 "Status": status.replace("_", " "),
                 "Booking number": r.get("booking_number", ""),
                 "Guest name": sc.get("Guest name", ""),
-                "Room category": sc.get("Room category", ""),
+                "Room type": sc.get("Room type", ""),
                 "Follow-up": r.get("followup_text") or "",
             }
         )
@@ -644,7 +644,7 @@ elif page == "Task history":
             st.error(f"Could not save review status: {e}")
 
     guest_comment = (scenario.get("Guest comment", "") or "").strip()
-    extra_services = scenario.get("Extra services", "(none)")
+    extra_services = scenario.get("Requests & extras", "(none)")
 
     with st.container(border=True):
         st.markdown(f"**Finished**  \n{finished}")
@@ -663,7 +663,7 @@ elif page == "Task history":
             c1.markdown(f"**{label}**")
             c2.markdown(str(value) if value is not None else "")
 
-        row_line("Room category", scenario.get("Room category", ""))
+        row_line("Room type", scenario.get("Room type", ""))
         row_line("Number of guests", scenario.get("Number of guests", ""))
         row_line("Nights", scenario.get("Nights", ""))
         row_line("Arrival", scenario.get("Arrival", ""))
@@ -671,7 +671,7 @@ elif page == "Task history":
 
         st.divider()
 
-        st.markdown("**Extra services**")
+        st.markdown("**Requests & extras**")
         if extra_services and extra_services != "(none)":
             for s in [x.strip() for x in str(extra_services).split(",") if x.strip()]:
                 st.markdown(f"- {s}")
