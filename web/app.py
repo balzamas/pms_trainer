@@ -234,7 +234,8 @@ def config_editor(cfg: dict) -> tuple[dict, bool]:
     with tabs[1]:
         st.caption("Add/edit guests. min_guests/max_guests control compatibility with room categories.")
     
-        GUESTS_KEY = "guests_editor_df"   # <- new, clean key (avoid the broken one)
+        GUESTS_KEY = "guests_editor_df"
+        GUESTS_WIDGET_KEY = "guests_editor_widget"
     
         if GUESTS_KEY not in st.session_state:
             base = cfg.get("guests", [])
@@ -244,11 +245,12 @@ def config_editor(cfg: dict) -> tuple[dict, bool]:
                 empty_row={"full_name": "", "comment": "", "min_guests": 1, "max_guests": 99},
             )
     
-        edited = st.data_editor(
+        # IMPORTANT: don't overwrite the editor DF with coerced ints each rerun
+        edited_raw = st.data_editor(
             st.session_state[GUESTS_KEY],
             use_container_width=True,
             num_rows="dynamic",
-            key="guests_editor_widget",   # <- widget key separate from DF storage
+            key=GUESTS_WIDGET_KEY,
             column_config={
                 "full_name": st.column_config.TextColumn("Full name", required=True),
                 "comment": st.column_config.TextColumn("Comment"),
@@ -257,16 +259,21 @@ def config_editor(cfg: dict) -> tuple[dict, bool]:
             },
         )
     
-        # Apply defaults + normalize
-        edited = _apply_row_defaults(edited, "full_name", {"min_guests": 1, "max_guests": 99})
-        edited["full_name"] = edited["full_name"].fillna("").astype(str)
-        edited["comment"] = edited["comment"].fillna("").astype(str)
-        edited["min_guests"] = pd.to_numeric(edited["min_guests"], errors="coerce").fillna(1).astype(int)
-        edited["max_guests"] = pd.to_numeric(edited["max_guests"], errors="coerce").fillna(99).astype(int)
+        # Only fill defaults for missing values (safe, doesn't fight the editor)
+        edited_ui = _apply_row_defaults(edited_raw, "full_name", {"min_guests": 1, "max_guests": 99})
+        edited_ui["full_name"] = edited_ui["full_name"].fillna("").astype(str)
+        if "comment" not in edited_ui.columns:
+            edited_ui["comment"] = ""
+        edited_ui["comment"] = edited_ui["comment"].fillna("").astype(str)
     
-        # Persist stable DF for next rerun
-        st.session_state[GUESTS_KEY] = edited
-        cfg["guests"] = edited.to_dict(orient="records")
+        # Write back ONLY the default-filling (no int coercion here)
+        st.session_state[GUESTS_KEY] = edited_ui
+    
+        # Build cfg with coercion (this won't affect the editor UX)
+        guests_cfg = edited_ui.copy()
+        guests_cfg["min_guests"] = pd.to_numeric(guests_cfg["min_guests"], errors="coerce").fillna(1).astype(int)
+        guests_cfg["max_guests"] = pd.to_numeric(guests_cfg["max_guests"], errors="coerce").fillna(99).astype(int)
+        cfg["guests"] = guests_cfg.to_dict(orient="records")
 
     # --- Room categories ---
     with tabs[2]:
@@ -275,7 +282,6 @@ def config_editor(cfg: dict) -> tuple[dict, bool]:
         ROOMCATS_DF_KEY = "roomcats_editor_df"
         ROOMCATS_WIDGET_KEY = "roomcats_editor_widget"
     
-        # Seed storage DF once
         if ROOMCATS_DF_KEY not in st.session_state:
             base = cfg.get("room_categories", [])
             st.session_state[ROOMCATS_DF_KEY] = _ensure_df(
@@ -284,11 +290,11 @@ def config_editor(cfg: dict) -> tuple[dict, bool]:
                 empty_row={"name": "", "min_guests": 1, "max_guests": 99},
             )
     
-        edited = st.data_editor(
+        edited_raw = st.data_editor(
             st.session_state[ROOMCATS_DF_KEY],
             use_container_width=True,
             num_rows="dynamic",
-            key=ROOMCATS_WIDGET_KEY,  # widget owns edit lifecycle
+            key=ROOMCATS_WIDGET_KEY,
             column_config={
                 "name": st.column_config.TextColumn("Category name", required=True),
                 "min_guests": st.column_config.NumberColumn("Min guests", min_value=1, step=1),
@@ -296,15 +302,17 @@ def config_editor(cfg: dict) -> tuple[dict, bool]:
             },
         )
     
-        # Defaults + normalization
-        edited = _apply_row_defaults(edited, "name", {"min_guests": 1, "max_guests": 99})
-        edited["name"] = edited["name"].fillna("").astype(str)
-        edited["min_guests"] = pd.to_numeric(edited["min_guests"], errors="coerce").fillna(1).astype(int)
-        edited["max_guests"] = pd.to_numeric(edited["max_guests"], errors="coerce").fillna(99).astype(int)
+        edited_ui = _apply_row_defaults(edited_raw, "name", {"min_guests": 1, "max_guests": 99})
+        edited_ui["name"] = edited_ui["name"].fillna("").astype(str)
     
-        # Persist clean DF for next rerun
-        st.session_state[ROOMCATS_DF_KEY] = edited
-        cfg["room_categories"] = edited.to_dict(orient="records")
+        # Write back only defaults / safe cleanup (no int coercion)
+        st.session_state[ROOMCATS_DF_KEY] = edited_ui
+    
+        # Build cfg with coercion
+        cats_cfg = edited_ui.copy()
+        cats_cfg["min_guests"] = pd.to_numeric(cats_cfg["min_guests"], errors="coerce").fillna(1).astype(int)
+        cats_cfg["max_guests"] = pd.to_numeric(cats_cfg["max_guests"], errors="coerce").fillna(99).astype(int)
+        cfg["room_categories"] = cats_cfg.to_dict(orient="records")
 
     # --- Services & follow-ups ---
     with tabs[3]:
