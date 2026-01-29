@@ -160,6 +160,28 @@ def save_config(cfg: dict) -> None:
 
 
 # -------------------- Option B config editor UI --------------------
+def _ensure_df(value, columns: list[str], empty_row: dict) -> pd.DataFrame:
+    """Convert whatever is in session_state into a clean DataFrame."""
+    if isinstance(value, pd.DataFrame):
+        df = value.copy()
+    elif isinstance(value, list):
+        df = pd.DataFrame(value)
+    elif isinstance(value, dict):
+        # could be dict of rows or dict of columns; both handled by DataFrame()
+        df = pd.DataFrame(value)
+    else:
+        df = pd.DataFrame([])
+
+    if df.empty:
+        df = pd.DataFrame([empty_row])
+
+    # force expected columns + order
+    for c in columns:
+        if c not in df.columns:
+            df[c] = None
+    df = df.reindex(columns=columns)
+    return df
+
 def _apply_row_defaults(df: pd.DataFrame, key_col: str, defaults: dict) -> pd.DataFrame:
     """
     For rows where key_col has a value (e.g. name/full_name), ensure defaults for missing fields.
@@ -212,19 +234,21 @@ def config_editor(cfg: dict) -> tuple[dict, bool]:
     with tabs[1]:
         st.caption("Add/edit guests. min_guests/max_guests control compatibility with room categories.")
     
-        # Seed the editor ONLY once
-        if "guests_editor" not in st.session_state:
-            base = pd.DataFrame(cfg.get("guests", []))
-            if base.empty:
-                base = pd.DataFrame([{"full_name": "", "comment": "", "min_guests": 1, "max_guests": 99}])
-            base = base.reindex(columns=["full_name", "comment", "min_guests", "max_guests"])
-            st.session_state["guests_editor"] = base
+        GUESTS_KEY = "guests_editor_df"   # <- new, clean key (avoid the broken one)
     
-        st.data_editor(
-            st.session_state["guests_editor"],
+        if GUESTS_KEY not in st.session_state:
+            base = cfg.get("guests", [])
+            st.session_state[GUESTS_KEY] = _ensure_df(
+                base,
+                columns=["full_name", "comment", "min_guests", "max_guests"],
+                empty_row={"full_name": "", "comment": "", "min_guests": 1, "max_guests": 99},
+            )
+    
+        edited = st.data_editor(
+            st.session_state[GUESTS_KEY],
             use_container_width=True,
             num_rows="dynamic",
-            key="guests_editor",  # Streamlit writes edits into this key
+            key="guests_editor_widget",   # <- widget key separate from DF storage
             column_config={
                 "full_name": st.column_config.TextColumn("Full name", required=True),
                 "comment": st.column_config.TextColumn("Comment"),
@@ -233,43 +257,38 @@ def config_editor(cfg: dict) -> tuple[dict, bool]:
             },
         )
     
-        # Always read from the widget state
-        edited = st.session_state["guests_editor"].copy()
-    
-        # Ensure columns exist (defensive)
-        if "full_name" not in edited.columns:
-            edited["full_name"] = ""
-        if "comment" not in edited.columns:
-            edited["comment"] = ""
-    
-        # Defaults + normalization
+        # Apply defaults + normalize
         edited = _apply_row_defaults(edited, "full_name", {"min_guests": 1, "max_guests": 99})
-    
         edited["full_name"] = edited["full_name"].fillna("").astype(str)
         edited["comment"] = edited["comment"].fillna("").astype(str)
         edited["min_guests"] = pd.to_numeric(edited["min_guests"], errors="coerce").fillna(1).astype(int)
         edited["max_guests"] = pd.to_numeric(edited["max_guests"], errors="coerce").fillna(99).astype(int)
     
-        # CRITICAL: write normalized values back into the SAME widget key
-        st.session_state["guests_editor"] = edited
-    
+        # Persist stable DF for next rerun
+        st.session_state[GUESTS_KEY] = edited
         cfg["guests"] = edited.to_dict(orient="records")
 
     # --- Room categories ---
     with tabs[2]:
-        # Seed the editor ONLY once
-        if "roomcats_editor" not in st.session_state:
-            base = pd.DataFrame(cfg.get("room_categories", []))
-            if base.empty:
-                base = pd.DataFrame([{"name": "", "min_guests": 1, "max_guests": 99}])
-            base = base.reindex(columns=["name", "min_guests", "max_guests"])
-            st.session_state["roomcats_editor"] = base
+        st.caption("Add/edit room categories.")
     
-        st.data_editor(
-            st.session_state["roomcats_editor"],
+        ROOMCATS_DF_KEY = "roomcats_editor_df"
+        ROOMCATS_WIDGET_KEY = "roomcats_editor_widget"
+    
+        # Seed storage DF once
+        if ROOMCATS_DF_KEY not in st.session_state:
+            base = cfg.get("room_categories", [])
+            st.session_state[ROOMCATS_DF_KEY] = _ensure_df(
+                base,
+                columns=["name", "min_guests", "max_guests"],
+                empty_row={"name": "", "min_guests": 1, "max_guests": 99},
+            )
+    
+        edited = st.data_editor(
+            st.session_state[ROOMCATS_DF_KEY],
             use_container_width=True,
             num_rows="dynamic",
-            key="roomcats_editor",  # <- Streamlit writes edits into this
+            key=ROOMCATS_WIDGET_KEY,  # widget owns edit lifecycle
             column_config={
                 "name": st.column_config.TextColumn("Category name", required=True),
                 "min_guests": st.column_config.NumberColumn("Min guests", min_value=1, step=1),
@@ -277,18 +296,14 @@ def config_editor(cfg: dict) -> tuple[dict, bool]:
             },
         )
     
-        # Always read from the widget state
-        edited = st.session_state["roomcats_editor"].copy()
-    
         # Defaults + normalization
         edited = _apply_row_defaults(edited, "name", {"min_guests": 1, "max_guests": 99})
         edited["name"] = edited["name"].fillna("").astype(str)
         edited["min_guests"] = pd.to_numeric(edited["min_guests"], errors="coerce").fillna(1).astype(int)
         edited["max_guests"] = pd.to_numeric(edited["max_guests"], errors="coerce").fillna(99).astype(int)
     
-        # CRITICAL: write normalized values back into the SAME widget key
-        st.session_state["roomcats_editor"] = edited
-    
+        # Persist clean DF for next rerun
+        st.session_state[ROOMCATS_DF_KEY] = edited
         cfg["room_categories"] = edited.to_dict(orient="records")
 
     # --- Services & follow-ups ---
@@ -370,9 +385,18 @@ if page == "Config":
     if save_clicked:
         try:
             save_config(updated_cfg)
-            st.session_state.pop("guests_df", None)
-            st.session_state.pop("cats_df", None)
+    
+            # Reset editor state so next render seeds from saved cfg
+            st.session_state.pop("guests_editor", None)  # old broken key (safe to keep)
+            st.session_state.pop("guests_editor_df", None)
+            st.session_state.pop("guests_editor_widget", None)
+    
+            st.session_state.pop("roomcats_editor", None)  # old broken key (safe to keep)
+            st.session_state.pop("roomcats_editor_df", None)
+            st.session_state.pop("roomcats_editor_widget", None)
+    
             st.success("Saved config to database.")
+            st.rerun()
         except Exception as e:
             st.error(f"Save failed: {e}")
 
