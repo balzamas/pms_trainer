@@ -200,6 +200,7 @@ def config_editor(cfg: dict) -> tuple[dict, bool]:
             guests_df,
             use_container_width=True,
             num_rows="dynamic",
+            key="guests_editor",
             column_config={
                 "full_name": st.column_config.TextColumn("Full name", required=True),
                 "comment": st.column_config.TextColumn("Comment"),
@@ -227,6 +228,7 @@ def config_editor(cfg: dict) -> tuple[dict, bool]:
             cats_df,
             use_container_width=True,
             num_rows="dynamic",
+            key="roomcats_editor",
             column_config={
                 "name": st.column_config.TextColumn("Category name", required=True),
                 "min_guests": st.column_config.NumberColumn("Min guests", min_value=1, step=1),
@@ -237,7 +239,7 @@ def config_editor(cfg: dict) -> tuple[dict, bool]:
         # ✅ keep numeric columns numeric
         cats_df["name"] = cats_df["name"].fillna("").astype(str)
         cats_df["min_guests"] = pd.to_numeric(cats_df["min_guests"], errors="coerce").fillna(1).astype(int)
-        cats_df["max_guests"] = pd.to_numeric(cats_df["max_guests"], errors="coerce").fillna(1).astype(int)
+        cats_df["max_guests"] = pd.to_numeric(cats_df["max_guests"], errors="coerce").fillna(99).astype(int)
     
         cfg["room_categories"] = cats_df.to_dict(orient="records")
 
