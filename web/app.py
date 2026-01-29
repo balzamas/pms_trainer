@@ -474,7 +474,7 @@ elif page == "Scenario":
                     c1.markdown(f"**{label}**")
                     c2.markdown(str(value) if value is not None else "")
 
-                row("Room type", scenario.get("Room type", ""))
+                row("Room type", scenario.get("Room category", ""))
                 row("Number of guests", scenario.get("Number of guests", ""))
                 row("Nights", scenario.get("Nights", ""))
                 row("Arrival", scenario.get("Arrival", ""))
@@ -579,7 +579,7 @@ elif page == "Task history":
                 "Status": status.replace("_", " "),
                 "Booking number": r.get("booking_number", ""),
                 "Guest name": sc.get("Guest name", ""),
-                "Room type": sc.get("Room type", ""),
+                "Room type": sc.get("Room category", ""),
                 "Follow-up": r.get("followup_text") or "",
             }
         )
@@ -663,7 +663,7 @@ elif page == "Task history":
             c1.markdown(f"**{label}**")
             c2.markdown(str(value) if value is not None else "")
 
-        row_line("Room type", scenario.get("Room type", ""))
+        row_line("Room type", scenario.get("Room category", ""))
         row_line("Number of guests", scenario.get("Number of guests", ""))
         row_line("Nights", scenario.get("Nights", ""))
         row_line("Arrival", scenario.get("Arrival", ""))
