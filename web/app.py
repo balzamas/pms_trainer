@@ -460,7 +460,7 @@ elif page == "Scenario":
             st.subheader("Scenario details")
 
             guest_comment = scenario.get("Guest comment", "").strip()
-            extra_services = scenario.get("Requests & extras", "(none)")
+            extra_services = scenario.get("Extra services", "(none)")
 
             with st.container(border=True):
                 st.markdown(f"**Guest name**  \n{scenario.get('Guest name', '')}")
@@ -489,7 +489,7 @@ elif page == "Scenario":
                 else:
                     st.markdown("- None")
         else:
-            st.info("Click **New task** to generate a scenario.")
+            st.info("Click **New scenario** to generate a scenario.")
 
     with col2:
         st.subheader("Finish")
@@ -644,7 +644,7 @@ elif page == "Task history":
             st.error(f"Could not save review status: {e}")
 
     guest_comment = (scenario.get("Guest comment", "") or "").strip()
-    extra_services = scenario.get("Requests & extras", "(none)")
+    extra_services = scenario.get("Extra services", "(none)")
 
     with st.container(border=True):
         st.markdown(f"**Finished**  \n{finished}")
