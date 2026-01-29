@@ -295,8 +295,8 @@ def config_editor(cfg: dict) -> tuple[dict, bool]:
 
     # --- Room categories ---
     with tabs[2]:
-        st.caption("Add/edit room categories. Click **Apply changes** when done editing.")
-        st.caption("Category extras will be mixed into the same 'Requests & extras' list during scenario generation.")
+        st.caption("Add/edit room types. Click **Apply changes** when done editing.")
+        st.caption("Type extras will be mixed into the same 'Requests & extras' list during scenario generation.")
 
         ROOMCATS_KEY = "roomcats_editor_df"
 
@@ -314,7 +314,7 @@ def config_editor(cfg: dict) -> tuple[dict, bool]:
                 use_container_width=True,
                 num_rows="dynamic",
                 column_config={
-                    "name": st.column_config.TextColumn("Category name", required=True),
+                    "name": st.column_config.TextColumn("Type name", required=True),
                     "min_guests": st.column_config.NumberColumn("Min guests", min_value=1, step=1),
                     "max_guests": st.column_config.NumberColumn("Max guests", min_value=1, step=1),
                     "category_extras": st.column_config.TextColumn(
