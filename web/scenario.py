@@ -157,15 +157,40 @@ def generate_scenario(cfg: dict) -> dict:
 
     max_services = int(cfg.get("max_services", 3))
 
-    # ✅ One pool for extras: global extras + room-category-specific extras
-    services_pool = list(cfg.get("extra_services", []))
-    services_pool += parse_category_extras(category.get("category_extras", ""))
+    global_pool = list(cfg.get("extra_services", []))
+    category_pool = parse_category_extras(category.get("category_extras", ""))
 
-    # (Optional) remove duplicates while keeping order
-    services_pool = unique_keep_order(services_pool)
+    # ✅ total pool size for probability calculation (like before)
+    total_pool_size = len(global_pool) + len(category_pool)
 
-    num_services = random.randint(0, min(max_services, len(services_pool))) if services_pool else 0
-    other_services = random.sample(services_pool, k=num_services) if num_services > 0 else []
+    # NOTE: We limit category extras to max 1, so the maximum number of selectable extras becomes:
+    max_possible = min(max_services, len(global_pool) + (1 if category_pool else 0))
+
+    if max_possible > 0:
+        num_services = random.randint(0, max_possible)
+    else:
+        num_services = 0
+
+    other_services: list[str] = []
+
+    # ✅ Decide whether the ONE category extra is included.
+    # Probability is proportional to category_pool size relative to total pool,
+    # so category extras appear roughly as often as before, but capped at 1.
+    include_cat = False
+    if category_pool and num_services > 0 and total_pool_size > 0:
+        p_cat = len(category_pool) / total_pool_size
+        include_cat = (random.random() < p_cat)
+
+    if include_cat and len(other_services) < num_services:
+        other_services.append(random.choice(category_pool))
+
+    # Fill the remaining slots from global extras
+    remaining = num_services - len(other_services)
+    if remaining > 0 and global_pool:
+        other_services.extend(random.sample(global_pool, k=min(remaining, len(global_pool))))
+
+    # Optional: shuffle so the category extra isn't always first
+    random.shuffle(other_services)
 
     breakfast_service = generate_breakfast_service(cfg, guests_count)
     if breakfast_service:
