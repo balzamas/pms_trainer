@@ -469,7 +469,7 @@ elif page == "Scenario":
 
                 st.divider()
 
-                st.markdown("**Extra services**")
+                st.markdown("**Extra services/requests**")
                 if extra_services and extra_services != "(none)":
                     for s in [x.strip() for x in str(extra_services).split(",") if x.strip()]:
                         st.markdown(f"- {s}")
