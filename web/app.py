@@ -114,13 +114,26 @@ def login_ui():
         if st.button("Create account", type="primary"):
             try:
                 res = db.sign_up(email2.strip(), password2)
-                session = getattr(res, "session", None) or res.get("session")
+    
+                # Works for AuthResponse objects and dict-like responses
+                session = getattr(res, "session", None)
+                if session is None and isinstance(res, dict):
+                    session = res.get("session")
+    
+                # Some versions wrap in `.data`
+                if session is None:
+                    data = getattr(res, "data", None)
+                    session = getattr(data, "session", None)
+                    if session is None and isinstance(data, dict):
+                        session = data.get("session")
+    
                 if session:
                     _set_session_from_auth(res)
                     st.success("Account created and logged in.")
                     st.rerun()
                 else:
                     st.info("Account created. Check your email to confirm, then log in.")
+    
             except Exception as e:
                 st.error(f"Sign up failed: {e}")
 
