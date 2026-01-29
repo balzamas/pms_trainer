@@ -5,30 +5,61 @@ from datetime import date, timedelta
 from typing import Any, Dict, List
 
 def default_config() -> dict:
-    today = date.today()
     return {
         "booking_window": {
-            "earliest_arrival": today.isoformat(),
-            "latest_arrival": (today + timedelta(days=90)).isoformat(),
+            "earliest_arrival": "2027-01-01",
+            "latest_arrival": "2027-03-01",
         },
-        "stay_length_nights": {"min": 1, "max": 5},
+        "stay_length_nights": {
+            "min": 1,
+            "max": 5,
+        },
         "max_services": 3,
         "follow_up_probability": 0.33,
 
-        "guests": [],
-        "room_categories": [],
-        "extra_services": [],
-        "follow_up_tasks": [],
+        # ✅ DEFAULT GUEST
+        "guests": [
+            {
+                "full_name": "John Doe",
+                "comment": "",
+                "min_guests": 1,
+                "max_guests": 99,
+            }
+        ],
 
-        "breakfast_types": ["Deluxe", "Normal", "Mini"],
+        # ✅ DEFAULT ROOM CATEGORY
+        "room_categories": [
+            {
+                "name": "Double room",
+                "min_guests": 1,
+                "max_guests": 2,
+                # optional, new field
+                "category_extras": "baby bed;balcony",
+            }
+        ],
+
+        # Global extras
+        "extra_services": [
+            "Late check-in",
+            "Parking",
+            "Pet",
+        ],
+
+        "follow_up_tasks": [
+            "Check payment status",
+            "Send pre-arrival email",
+        ],
+
         "breakfast_policy": {
             "enabled": False,
             "probability_any_breakfast": 0.7,
             "probability_full_group_if_any": 0.7,
-            # optional future fields:
-            "min_breakfasts": 0,
-            "max_breakfasts_per_guest": 1,
         },
+
+        "breakfast_types": [
+            "Continental",
+            "Vegan",
+        ],
     }
 
 def normalize_config(cfg: dict) -> dict:
