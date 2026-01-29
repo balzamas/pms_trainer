@@ -190,14 +190,17 @@ def config_editor(cfg: dict) -> tuple[dict, bool]:
     # --- Guests ---
     with tabs[1]:
         st.caption("Add/edit guests. min_guests/max_guests control compatibility with room categories.")
-        guests_df = pd.DataFrame(cfg.get("guests", []))
-        if guests_df.empty:
-            guests_df = pd.DataFrame([{"full_name": "", "comment": "", "min_guests": 1, "max_guests": 99}])
-
-        guests_df = guests_df.reindex(columns=["full_name", "comment", "min_guests", "max_guests"])
-        
-        guests_df = st.data_editor(
-            guests_df,
+    
+        # Keep editor state stable across reruns
+        if "guests_df" not in st.session_state:
+            guests_df_init = pd.DataFrame(cfg.get("guests", []))
+            if guests_df_init.empty:
+                guests_df_init = pd.DataFrame([{"full_name": "", "comment": "", "min_guests": 1, "max_guests": 99}])
+            guests_df_init = guests_df_init.reindex(columns=["full_name", "comment", "min_guests", "max_guests"])
+            st.session_state["guests_df"] = guests_df_init
+    
+        edited = st.data_editor(
+            st.session_state["guests_df"],
             use_container_width=True,
             num_rows="dynamic",
             key="guests_editor",
@@ -208,24 +211,32 @@ def config_editor(cfg: dict) -> tuple[dict, bool]:
                 "max_guests": st.column_config.NumberColumn("Max guests", min_value=1, step=1),
             },
         )
+    
+        # Persist immediately so reruns don't revert what user just typed
+        st.session_state["guests_df"] = edited
+    
+        # Normalize for saving
+        guests_df = edited.copy()
         guests_df["full_name"] = guests_df["full_name"].fillna("").astype(str)
-        guests_df["comment"] = guests_df.get("comment", "").fillna("").astype(str)
+        if "comment" not in guests_df.columns:
+            guests_df["comment"] = ""
+        guests_df["comment"] = guests_df["comment"].fillna("").astype(str)
         guests_df["min_guests"] = pd.to_numeric(guests_df["min_guests"], errors="coerce").fillna(1).astype(int)
         guests_df["max_guests"] = pd.to_numeric(guests_df["max_guests"], errors="coerce").fillna(99).astype(int)
-        
+    
         cfg["guests"] = guests_df.to_dict(orient="records")
 
     # --- Room categories ---
     with tabs[2]:
-        cats_df = pd.DataFrame(cfg.get("room_categories", []))
-        if cats_df.empty:
-            cats_df = pd.DataFrame([{"name": "", "min_guests": 1, "max_guests": 99}])
-
-        # ✅ force UI column order
-        cats_df = cats_df.reindex(columns=["name", "min_guests", "max_guests"])
-        
-        cats_df = st.data_editor(
-            cats_df,
+        if "cats_df" not in st.session_state:
+            cats_df_init = pd.DataFrame(cfg.get("room_categories", []))
+            if cats_df_init.empty:
+                cats_df_init = pd.DataFrame([{"name": "", "min_guests": 1, "max_guests": 99}])
+            cats_df_init = cats_df_init.reindex(columns=["name", "min_guests", "max_guests"])
+            st.session_state["cats_df"] = cats_df_init
+    
+        edited = st.data_editor(
+            st.session_state["cats_df"],
             use_container_width=True,
             num_rows="dynamic",
             key="roomcats_editor",
@@ -236,7 +247,9 @@ def config_editor(cfg: dict) -> tuple[dict, bool]:
             },
         )
     
-        # ✅ keep numeric columns numeric
+        st.session_state["cats_df"] = edited
+    
+        cats_df = edited.copy()
         cats_df["name"] = cats_df["name"].fillna("").astype(str)
         cats_df["min_guests"] = pd.to_numeric(cats_df["min_guests"], errors="coerce").fillna(1).astype(int)
         cats_df["max_guests"] = pd.to_numeric(cats_df["max_guests"], errors="coerce").fillna(99).astype(int)
