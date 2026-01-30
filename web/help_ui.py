@@ -128,7 +128,7 @@ def render_help_tab() -> None:
 
     st.markdown("**Breakfast**")
     st.write(
-        "Controls whether breakfast can be part of scenarios."
+        "Controls whether pre order breakfast can be part of scenarios."
     )
     st.markdown("- **Enable breakfast**: allows breakfast items to appear in scenarios.")
     st.markdown(
