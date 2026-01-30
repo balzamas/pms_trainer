@@ -96,4 +96,47 @@ def render_help_tab() -> None:
         "These extras are mixed into the scenario's requests/extras."
     )
 
-    st.mar
+    st.markdown("**Requests & follow-ups**")
+    st.write(
+        "Controls what kinds of extras and follow-up tasks can appear."
+    )
+    st.markdown(
+        "- **Requests & extras (global)**: one item per line. These can be selected for any room type."
+    )
+    st.markdown(
+        "- **Follow-up tasks**: one item per line. These can appear as an additional training task after finishing."
+    )
+
+    st.markdown("**Breakfast**")
+    st.write(
+        "Controls whether breakfast can be part of scenarios."
+    )
+    st.markdown("- **Enable breakfast**: allows breakfast items to appear in scenarios.")
+    st.markdown(
+        "- **Probability any breakfast**: chance that breakfast is included at all."
+    )
+    st.markdown(
+        "- **Probability full group if any**: if breakfast is included, chance it applies to all guests."
+    )
+    st.markdown("- **Breakfast types**: one type per line (example: 'Buffet', 'Continental', 'Vegan').")
+
+    st.divider()
+
+    # -------------------- practical tips --------------------
+    st.markdown("### Practical tips")
+
+    st.markdown("**For trainees**")
+    st.markdown("- Read the scenario carefully before starting in the PMS.")
+    st.markdown("- Double-check: dates, room type, number of guests, and requests.")
+    st.markdown("- Use notes/remarks fields for special requests when appropriate.")
+
+    st.markdown("**For trainers**")
+    st.markdown("- Review tasks in Task history and focus on New / Needs review.")
+    st.markdown("- When marking Needs review, discuss the booking together and explain what to change next time.")
+
+    st.divider()
+
+    st.markdown("### Troubleshooting")
+    with st.expander("I cannot find a generated task", expanded=False):
+        st.write("Check the Task history filter and make sure tasks are not hidden by the status filter.")
+
