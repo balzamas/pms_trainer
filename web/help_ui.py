@@ -159,7 +159,7 @@ def render_help_tab() -> None:
     with st.expander("I cannot find a generated task", expanded=False):
         st.write("Check the Task history filter and make sure tasks are not hidden by the status filter.")
 
-    st.markdown("**Dev**")
+    st.markdown("### Dev")
     st.markdown("d.berger@dontsniff.co.uk")
     st.markdown("https://github.com/balzamas/pms_trainer/")
 
