@@ -8,9 +8,9 @@ In short:
 - Staff-member makes a booking following the scenario
 - Trainer manually checks the PMS to see if they made the reservation correctly
 
-Log files for controlling see folder /tasks/.
+See https://pmstrainer.streamlit.app/ to use the app.
 
-![Screenshot UI.](sshot.png)
+# Legacy: desktop version (see folder legacy)
 
 ## Run under Linux
 Needs python3-tk (Install in Debian systems: `sudo apt install -y python3 python3-tk`)
