@@ -30,7 +30,7 @@ from scenario import (
 )
 
 from config_model import default_config, normalize_config, validate_config
-
+from help_ui import render_help_tab, render_login_explanation
 
 # -------------------- auth helpers --------------------
 
@@ -94,6 +94,8 @@ def logout():
 def login_ui():
     st.title("PMS Trainer — Login")
 
+    render_login_explanation()
+    
     tab_login, tab_signup = st.tabs(["Login", "Create account"])
 
     with tab_login:
@@ -428,7 +430,7 @@ cfg = st.session_state["cfg"]
 
 st.title("PMS Scenario Generator")
 
-page = st.radio("Menu", ["Scenario", "Config", "Task history"], horizontal=True)
+page = st.radio("Menu", ["Scenario", "Config", "Task history", "Help"], horizontal=True)
 
 if page == "Config":
     updated_cfg, save_clicked = config_editor(cfg)
@@ -695,3 +697,6 @@ elif page == "Task history":
         file_name=f"PMS_Task_{r.get('generated_id','task')}_BN-{r.get('booking_number','')}.txt",
         key=f"dl_{task_id}",
     )
+    
+elif page == "Help":
+    render_help_tab()
