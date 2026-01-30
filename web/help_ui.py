@@ -62,10 +62,3 @@ def render_help_tab() -> None:
         "Shows previously generated tasks and their status. "
         "Click a row to see details in a readable format."
     )
-
-    st.divider()
-
-    st.markdown("### Common checks when reviewing")
-    st.markdown("- Dates and length of stay")
-    st.markdown("- Room category and number of guests")
-    st.markdown("- Guest data and special requests")
