@@ -11,13 +11,11 @@ def render_login_explanation() -> None:
 
     with st.expander("How the training workflow works", expanded=False):
         st.markdown("**Step 1 — Generate a scenario**")
-        st.write("The tool generates a booking request (guest, dates, room category, guests, special requests).")
+        st.write("The tool generates a booking request (guest, dates, room category, special requests etc.).")
         st.markdown("**Step 2 — Create the booking in the PMS**")
         st.write("The trainee creates the booking in the real PMS according to the scenario.")
         st.markdown("**Step 3 — Review**")
         st.write("The trainer compares scenario vs. booking and marks the task as Okay or Needs review.")
-
-    st.caption("If you do not have an account, contact your trainer or administrator.")
 
 
 def render_help_tab() -> None:
