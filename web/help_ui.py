@@ -17,9 +17,6 @@ def render_login_explanation() -> None:
         st.markdown("**Step 3 — Review**")
         st.write("The trainer compares scenario vs. booking and marks the task as Okay or Needs review.")
 
-    st.caption("If you do not have an account, contact your trainer or administrator.")
-
-
 def render_help_tab() -> None:
     st.markdown("## Help")
     st.write(
