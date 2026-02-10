@@ -100,7 +100,7 @@ def login_ui():
 
     with col1:
         if LOGO_PATH.exists():
-            st.image(str(LOGO_PATH), width=90)
+            st.image(str(LOGO_PATH), width=150)
 
     with col2:
         st.markdown("## ReservoDojo")
