@@ -599,25 +599,7 @@ elif page == "Scenario":
             )
 
             if followup:
-                st.markdown(
-                    f"""
-                    <div style="
-                        position: sticky;
-                        top: 0;
-                        z-index: 999;
-                        background-color: #fff3cd;
-                        border: 2px solid #ffecb5;
-                        padding: 20px;
-                        margin-bottom: 20px;
-                        text-align: center;
-                        font-size: 1.1rem;
-                    ">
-                        <strong>Follow-up required for booking {booking_number.strip()}</strong><br><br>
-                        {followup}
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
+                st.toast(f"Follow-up for booking {booking_number.strip()}: {followup}", icon="⚠️")
                 st.warning(f"Follow-up: {followup}")
 
 elif page == "Task history":
