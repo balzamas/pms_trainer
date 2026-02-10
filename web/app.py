@@ -409,6 +409,41 @@ def config_editor(cfg: dict) -> tuple[dict, bool]:
     save_clicked = st.button("Save config", type="primary", disabled=bool(errors))
     return cfg, save_clicked
 
+def apply_difficulty_to_cfg(cfg: dict, difficulty: str) -> dict:
+    """
+    Returns a modified copy of cfg depending on difficulty.
+    - hard: unchanged
+    - medium: no extras/breakfast
+    - easy: no extras/breakfast/follow-up
+    """
+    effective = dict(cfg)  # shallow copy is enough (we replace the relevant keys)
+
+    difficulty = (difficulty or "hard").strip().lower()
+
+    if difficulty in ("medium", "easy"):
+        effective["max_services"] = 0
+        effective["extra_services"] = []
+        effective["breakfast_policy"] = dict(effective.get("breakfast_policy", {}))
+        effective["breakfast_policy"]["enabled"] = False
+        # optional: also clear types to avoid confusion
+        effective["breakfast_types"] = []
+
+        # Note: room-category extras are inside room_categories; scenario.py already
+        # caps those to 1 but we want NONE for medium/easy.
+        # Easiest: remove category_extras from each room category copy.
+        roomcats = []
+        for c in effective.get("room_categories", []) or []:
+            c2 = dict(c)
+            c2["category_extras"] = ""
+            roomcats.append(c2)
+        effective["room_categories"] = roomcats
+
+    if difficulty == "easy":
+        effective["follow_up_probability"] = 0.0
+        effective["follow_up_tasks"] = []
+
+    return effective
+
 
 # -------------------- main UI --------------------
 
@@ -452,10 +487,30 @@ elif page == "Scenario":
     col1, col2 = st.columns([2, 1], gap="large")
 
     with col1:
-        if st.button("New scenario", type="primary"):
-            st.session_state["scenario"] = generate_scenario(cfg)
+        # Difficulty selection + New scenario button side-by-side
+        b1, b2 = st.columns([2, 3], vertical_alignment="bottom")
+
+        with b1:
+            new_clicked = st.button("New scenario", type="primary")
+
+        with b2:
+            difficulty = st.radio(
+                "Difficulty",
+                options=["hard", "medium", "easy"],
+                index=0,
+                horizontal=True,
+                key="difficulty_level",
+            )
+
+        if new_clicked:
+            effective_cfg = apply_difficulty_to_cfg(cfg, difficulty)
+            st.session_state["scenario_cfg"] = effective_cfg
+            st.session_state["scenario_difficulty"] = difficulty
+
+            st.session_state["scenario"] = generate_scenario(effective_cfg)
             st.session_state["generated_id"] = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             st.session_state["followup"] = None
+
 
         scenario = st.session_state.get("scenario")
         if scenario:
@@ -509,9 +564,12 @@ elif page == "Scenario":
                 st.error("Please enter a booking number.")
                 st.stop()
 
+            effective_cfg = st.session_state.get("scenario_cfg") or cfg
+
             followup: Optional[str] = None
-            if should_generate_followup(cfg):
-                followup = pick_random_followup(cfg)
+            if should_generate_followup(effective_cfg):
+                followup = pick_random_followup(effective_cfg)
+
 
             try:
                 sb = get_authed_sb()
