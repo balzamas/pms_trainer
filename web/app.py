@@ -470,7 +470,7 @@ col_logo, col_title = st.columns([1, 4], vertical_alignment="center")
 
 with col_logo:
     if LOGO_PATH.exists():
-        st.image(str(LOGO_PATH), width=80)
+        st.image(str(LOGO_PATH), width=150)
     else:
         st.caption("Logo missing: assets/reservodojo-logo.png")
 
