@@ -92,8 +92,8 @@ def logout():
 
 
 def login_ui():
-    st.title("PMS Trainer — Login")
-
+    st.title("ReservoDojo — Login")
+    st.caption("Practice real reservations")
     render_login_explanation()
     
     tab_login, tab_signup = st.tabs(["Login", "Create account"])
@@ -446,7 +446,7 @@ def apply_difficulty_to_cfg(cfg: dict, difficulty: str) -> dict:
 
 # -------------------- main UI --------------------
 
-st.set_page_config(page_title="PMS Trainer", layout="wide")
+st.set_page_config(page_title="ReservoDojo", layout="wide")
 
 if not is_logged_in():
     login_ui()
@@ -462,7 +462,14 @@ if "cfg" not in st.session_state:
 
 cfg = st.session_state["cfg"]
 
-st.title("PMS Scenario Generator")
+col_logo, col_title = st.columns([1, 4], vertical_alignment="center")
+
+with col_logo:
+    st.image("assets/reservodojo-logo.png", width=80)
+
+with col_title:
+    st.markdown("## ReservoDojo")
+    st.caption("Practice real reservations")
 
 page = st.radio("Menu", ["Scenario", "Config", "Task history", "Help"], horizontal=True)
 
