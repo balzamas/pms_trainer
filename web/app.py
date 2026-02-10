@@ -8,6 +8,10 @@ import pandas as pd
 import streamlit as st
 
 from db import DB
+from pathlib import Path
+
+APP_DIR = Path(__file__).resolve().parent
+LOGO_PATH = APP_DIR / "assets" / "reservodojo-logo.png"
 
 # You must provide these in Streamlit secrets or environment.
 # Streamlit Cloud: add in App settings -> Secrets:
@@ -465,7 +469,10 @@ cfg = st.session_state["cfg"]
 col_logo, col_title = st.columns([1, 4], vertical_alignment="center")
 
 with col_logo:
-    st.image("assets/reservodojo-logo.png", width=80)
+    if LOGO_PATH.exists():
+        st.image(str(LOGO_PATH), width=80)
+    else:
+        st.caption("Logo missing: assets/reservodojo-logo.png")
 
 with col_title:
     st.markdown("## ReservoDojo")
