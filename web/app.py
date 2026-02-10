@@ -96,9 +96,20 @@ def logout():
 
 
 def login_ui():
-    st.title("ReservoDojo — Login")
-    st.caption("Practice real reservations")
+    col1, col2 = st.columns([1, 4], vertical_alignment="center")
+
+    with col1:
+        if LOGO_PATH.exists():
+            st.image(str(LOGO_PATH), width=90)
+
+    with col2:
+        st.markdown("## ReservoDojo")
+        st.caption("Practice real reservations")
+
+    st.divider()
+
     render_login_explanation()
+
     
     tab_login, tab_signup = st.tabs(["Login", "Create account"])
 
