@@ -444,6 +444,32 @@ def apply_difficulty_to_cfg(cfg: dict, difficulty: str) -> dict:
 
     return effective
 
+def maybe_show_followup_dialog() -> None:
+    """
+    Shows a modal dialog if there's an unacknowledged follow-up.
+    Uses Streamlit's st.dialog (Streamlit >= 1.32-ish).
+    """
+    followup = st.session_state.get("last_followup")
+    booking_number = st.session_state.get("last_finished_booking_number")
+    ack = st.session_state.get("followup_ack", True)
+
+    if not followup or ack:
+        return
+
+    @st.dialog("Follow-up task")
+    def _dlg():
+        st.markdown(
+            f"**Booking number:** {booking_number}\n\n"
+            f"**Follow-up:**\n- {followup}"
+        )
+        st.warning("Please read this carefully before downloading the task text.")
+        if st.button("I understand", type="primary"):
+            st.session_state["followup_ack"] = True
+            st.rerun()
+
+    _dlg()
+
+
 
 # -------------------- main UI --------------------
 
@@ -592,6 +618,8 @@ elif page == "Scenario":
                 st.session_state["generated_id"],
                 followup,
             )
+
+            maybe_show_followup_dialog()
 
             st.download_button(
                 "Download scenario (TXT)",
