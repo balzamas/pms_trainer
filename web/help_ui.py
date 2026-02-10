@@ -5,7 +5,7 @@ def render_login_explanation() -> None:
     """Shown on the login screen, above or next to the login form."""
     st.markdown("### What this tool is for")
     st.write(
-        "PMS Trainer creates realistic booking scenarios for training. "
+        "ReservoDojo creates realistic booking scenarios for training. "
         "Trainees create the booking in the real PMS. "
         "Trainers then review the result and mark it as Okay or Needs review."
     )
@@ -22,7 +22,7 @@ def render_login_explanation() -> None:
 def render_help_tab() -> None:
     st.markdown("## Help")
     st.write(
-        "This page explains the workflow and the main options in PMS Trainer. "
+        "This page explains the workflow and the main options in ReservoDojo. "
         "It is written for trainees and trainers."
     )
 
