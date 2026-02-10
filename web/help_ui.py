@@ -1,5 +1,6 @@
 import streamlit as st
 
+
 def render_login_explanation() -> None:
     """Shown on the login screen, above or next to the login form."""
     st.markdown("### What this tool is for")
@@ -16,6 +17,7 @@ def render_login_explanation() -> None:
         st.write("The trainee creates the booking in the real PMS according to the scenario.")
         st.markdown("**Step 3 — Review**")
         st.write("The trainer compares scenario vs. booking and marks the task as Okay or Needs review.")
+
 
 def render_help_tab() -> None:
     st.markdown("## Help")
@@ -56,6 +58,7 @@ def render_help_tab() -> None:
     st.markdown("**Scenario**")
     st.write(
         "Generate a new scenario and use it as the instruction for the trainee. "
+        "Before you generate, you can select a difficulty level. "
         "After the trainee created the booking in the PMS, enter the booking number and mark the task as finished."
     )
 
@@ -74,13 +77,36 @@ def render_help_tab() -> None:
 
     st.divider()
 
+    # -------------------- difficulty explained --------------------
+    st.markdown("### Difficulty levels")
+
+    st.write(
+        "When generating a scenario, you can choose a difficulty level. "
+        "Difficulty only changes which additional elements are included — the base scenario (guest, dates, room type, guests) stays realistic in all modes."
+    )
+
+    st.markdown("**Hard**")
+    st.markdown("- Includes requests/extras (if configured)")
+    st.markdown("- Breakfast can be included (if enabled in config)")
+    st.markdown("- Follow-up tasks can be generated when you finish a task")
+
+    st.markdown("**Medium**")
+    st.markdown("- No requests/extras")
+    st.markdown("- No breakfast")
+    st.markdown("- Follow-up tasks can still be generated when you finish a task")
+
+    st.markdown("**Easy**")
+    st.markdown("- No requests/extras")
+    st.markdown("- No breakfast")
+    st.markdown("- No follow-up tasks")
+
+    st.divider()
+
     # -------------------- config explained --------------------
     st.markdown("### Config explained (what each section changes)")
 
     st.markdown("**General**")
-    st.write(
-        "Controls the timeframe and basic limits for generated scenarios."
-    )
+    st.write("Controls the timeframe and basic limits for generated scenarios.")
     st.markdown("- **Earliest arrival / Latest arrival**: scenarios will use arrival dates within this range.")
     st.markdown("- **Stay min nights / Stay max nights**: scenarios will use a stay length within this range.")
     st.markdown(
@@ -100,9 +126,7 @@ def render_help_tab() -> None:
     )
 
     st.markdown("**Room types**")
-    st.write(
-        "Defines the room types that can appear in scenarios."
-    )
+    st.write("Defines the room types that can appear in scenarios.")
     st.markdown(
         "- **Min guests / Max guests**: occupancy range for that room type. "
         "This helps generate realistic pairings between room type and number of guests."
@@ -113,27 +137,15 @@ def render_help_tab() -> None:
     )
 
     st.markdown("**Requests & follow-ups**")
-    st.write(
-        "Controls what kinds of extras and follow-up tasks can appear."
-    )
-    st.markdown(
-        "- **Requests & extras (global)**: one item per line. These can be selected for any room type."
-    )
-    st.markdown(
-        "- **Follow-up tasks**: one item per line. These can appear as an additional training task after finishing."
-    )
+    st.write("Controls what kinds of extras and follow-up tasks can appear.")
+    st.markdown("- **Requests & extras (global)**: one item per line. These can be selected for any room type.")
+    st.markdown("- **Follow-up tasks**: one item per line. These can appear as an additional training task after finishing.")
 
     st.markdown("**Breakfast**")
-    st.write(
-        "Controls whether pre order breakfast can be part of scenarios."
-    )
+    st.write("Controls whether pre order breakfast can be part of scenarios.")
     st.markdown("- **Enable breakfast**: allows breakfast items to appear in scenarios.")
-    st.markdown(
-        "- **Probability any breakfast**: chance that breakfast is included at all."
-    )
-    st.markdown(
-        "- **Probability full group if any**: if breakfast is included, chance it applies to all guests."
-    )
+    st.markdown("- **Probability any breakfast**: chance that breakfast is included at all.")
+    st.markdown("- **Probability full group if any**: if breakfast is included, chance it applies to all guests.")
     st.markdown("- **Breakfast types**: one type per line (example: 'Buffet', 'Continental', 'Vegan').")
 
     st.divider()
@@ -159,5 +171,3 @@ def render_help_tab() -> None:
     st.markdown("### Dev")
     st.markdown("d.berger@dontsniff.co.uk")
     st.markdown("https://github.com/balzamas/pms_trainer/")
-
-    
