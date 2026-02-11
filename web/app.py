@@ -555,20 +555,16 @@ elif page == "Scenario":
                     c1.markdown(f"**{label}**")
                     c2.markdown(str(value) if value is not None else "")
 
-                row("Room type", scenario.get("Room category", ""))
-                # Guests + Nights in one line
-                c1, c2, c3, c4 = st.columns([1, 2, 1, 2])
-                c1.markdown("**Guests**")
-                c2.markdown(str(scenario.get("Number of guests", "")))
-                c3.markdown("**Nights**")
-                c4.markdown(str(scenario.get("Nights", "")))
-                
-                # Arrival + Departure in one line
-                c1, c2, c3, c4 = st.columns([1, 2, 1, 2])
-                c1.markdown("**Arrival**")
-                c2.markdown(str(scenario.get("Arrival", "")))
-                c3.markdown("**Departure**")
-                c4.markdown(str(scenario.get("Departure", "")))
+                st.markdown(
+                    f"""
+                **Room type**: {scenario.get("Room category", "")}  
+                **Guests**: {scenario.get("Number of guests", "")}  
+                **Nights**: {scenario.get("Nights", "")}  
+                **Arrival**: {scenario.get("Arrival", "")}  
+                **Departure**: {scenario.get("Departure", "")}
+                """.strip()
+                )
+
 
 
                 st.divider()
