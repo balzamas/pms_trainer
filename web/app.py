@@ -776,7 +776,7 @@ elif page == "Task history":
 
         st.divider()
 
-        st.markdown("<div style='font-weight:600; margin-bottom:4px;'>Requests & extras</div>", unsafe_allow_html=True)
+        st.markdown("**Requests & extras**")
         if extra_services and extra_services != "(none)":
             for s in [x.strip() for x in str(extra_services).split(",") if x.strip()]:
                 st.markdown(f"- {s}")
