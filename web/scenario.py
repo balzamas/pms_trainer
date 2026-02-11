@@ -179,7 +179,7 @@ def generate_scenario(cfg: dict) -> dict:
         "Guest name": guest["full_name"],
         "Guest comment": str(guest.get("comment", "")).strip(),
         "Room category": category["name"],
-        "Numberq of guests": guests_count,
+        "Number of guests": guests_count,
         "Arrival": arrival.isoformat(),
         "Departure": departure.isoformat(),
         "Nights": nights,
@@ -231,7 +231,7 @@ def render_task_text(
         "",
         f"Guest: {scenario.get('Guest name','')}{guest_comment_part}",
         f"Room: {scenario.get('Room category','')}",
-        f"Guests: {scenario.get('Numberq of guests','')}",
+        f"Guests: {scenario.get('Number of guests','')}",
         f"Arrival: {scenario.get('Arrival','')} | Departure: {scenario.get('Departure','')} | Nights: {scenario.get('Nights','')}",
         f"Extras: {scenario.get('Extra services','')}",
     ]
