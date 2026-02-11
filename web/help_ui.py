@@ -16,7 +16,7 @@ def render_login_explanation() -> None:
         st.markdown("**Step 2 — Create the booking in the PMS**")
         st.write("The trainee creates the booking in the real PMS according to the scenario.")
         st.markdown("**Step 3 — Review**")
-        st.write("The trainer compares scenario vs. booking and marks the task as Okay or Needs review.")
+        st.write("The trainer compares scenario vs. booking and marks the scenario as Okay or Needs review.")
 
 
 def render_help_tab() -> None:
@@ -41,7 +41,7 @@ def render_help_tab() -> None:
 
     st.markdown("**1) Scenario is generated**")
     st.write(
-        "A new task is created with a realistic booking request. "
+        "A new scenario is created with a realistic booking request. "
         "This is the description of what should be entered into the PMS."
     )
 
@@ -54,7 +54,7 @@ def render_help_tab() -> None:
     st.markdown("**3) Trainer reviews the booking**")
     st.write(
         "The trainer checks the booking in the PMS, compares it with the scenario, "
-        "and then marks the task:"
+        "and then marks the scenario:"
     )
     st.markdown("- New: not reviewed yet")
     st.markdown("- Okay: correct booking")
@@ -69,13 +69,13 @@ def render_help_tab() -> None:
     st.write(
         "Generate a new scenario and use it as the instruction for the trainee. "
         "Before you generate, you can select a difficulty level. "
-        "After the trainee created the booking in the PMS, enter the booking number and mark the task as finished."
+        "After the trainee created the booking in the PMS, enter the booking number and mark the scenario as finished."
     )
 
-    st.markdown("**Task history**")
+    st.markdown("**Review**")
     st.write(
-        "Shows previously finished tasks. Click a row to see the scenario details in a readable format. "
-        "Trainers can mark each task as Okay or Needs review."
+        "Shows previously finished scenarios. Click a row to see the scenario details in a readable format. "
+        "Trainers can mark each scenario as Okay or Needs review."
     )
 
     st.markdown("**Config**")
@@ -98,12 +98,12 @@ def render_help_tab() -> None:
     st.markdown("**Hard**")
     st.markdown("- Includes requests/extras (if configured)")
     st.markdown("- Breakfast can be included (if enabled in config)")
-    st.markdown("- Follow-up tasks can be generated when you finish a task")
+    st.markdown("- Follow-up tasks can be generated when you finish a scenario")
 
     st.markdown("**Medium**")
     st.markdown("- No requests/extras")
     st.markdown("- No breakfast")
-    st.markdown("- Follow-up tasks can still be generated when you finish a task")
+    st.markdown("- Follow-up tasks can still be generated when you finish a scenario")
 
     st.markdown("**Easy**")
     st.markdown("- No requests/extras")
@@ -123,7 +123,7 @@ def render_help_tab() -> None:
         "- **Max requests & extras**: maximum number of requests/extras that can appear in a scenario. "
         "This applies to the combined pool of global extras and room-type extras."
     )
-    st.markdown("- **Follow-up chance**: probability that a follow-up task is generated when a task is finished.")
+    st.markdown("- **Follow-up chance**: probability that a follow-up task is generated when a scenario is finished.")
 
     st.markdown("**Guest profiles**")
     st.write(
@@ -169,14 +169,14 @@ def render_help_tab() -> None:
     st.markdown("- Use notes/remarks fields for special requests when appropriate.")
 
     st.markdown("**For trainers**")
-    st.markdown("- Review tasks in Task history and focus on New / Needs review.")
+    st.markdown("- Review scenarios in Review and focus on New / Needs review.")
     st.markdown("- When marking Needs review, discuss the booking together and explain what to change next time.")
 
     st.divider()
 
     st.markdown("### Troubleshooting")
-    with st.expander("I cannot find a generated task", expanded=False):
-        st.write("Check the Task history filter and make sure tasks are not hidden by the status filter.")
+    with st.expander("I cannot find a generated scenario", expanded=False):
+        st.write("Check the Review filter and make sure scenarios are not hidden by the status filter.")
 
     st.markdown("### Dev")
     st.markdown("d.berger@dontsniff.co.uk")
