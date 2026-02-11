@@ -24,7 +24,17 @@ def render_help_tab() -> None:
     st.write(
         "This page explains the workflow and the main options in ReservoDojo. "
         "It is written for trainees and trainers."
+        
     )
+    st.markdown(
+    "<div style='margin-top:4px;'>"
+    "<a href='https://github.com/balzamas/pms_trainer/issues' target='_blank'>"
+    "Report a bug or suggest an improvement (GitHub Issues)"
+    "</a>"
+    "</div>",
+    unsafe_allow_html=True
+    )
+
 
     # -------------------- workflow --------------------
     st.markdown("### Workflow (from scenario to feedback)")
