@@ -215,7 +215,6 @@ def sanitize_for_filename(text: str) -> str:
     text = re.sub(r"[^A-Za-z0-9._-]", "", text)
     return text[:40] if text else "UNKNOWN"
 
-
 def render_task_text(
     scenario: dict,
     booking_number: str,
@@ -225,30 +224,31 @@ def render_task_text(
     finished_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     guest_comment = scenario.get("Guest comment", "")
-    guest_comment_line = f"\nGuest comment:    {guest_comment}" if guest_comment else ""
+    guest_comment_line = f" | Guest comment: {guest_comment}" if guest_comment else ""
 
-    content = f"""PMS TRAINING TASK
-=================
-
-TASK ID:          {generated_id}
-Booking number:   {booking_number}
-Finished at:      {finished_at}
-
-SCENARIO
---------
-Guest name:       {scenario.get('Guest name','')}{guest_comment_line}
-Room category:    {scenario.get('Room category','')}
-Guests:           {scenario.get('Number of guests','')}
-Arrival:          {scenario.get('Arrival','')}
-Departure:        {scenario.get('Departure','')}
-Nights:           {scenario.get('Nights','')}
-Extra services:   {scenario.get('Extra services','')}
-
-FOLLOW-UPS
-----------
-"""
+    lines = [
+        "PMS TRAINING TASK",
+        "=================",
+        f"TASK ID: {generated_id}",
+        f"Booking number: {booking_number}",
+        f"Finished at: {finished_at}",
+        "",
+        "SCENARIO",
+        "--------",
+        f"Guest name: {scenario.get('Guest name','')}{guest_comment_line}",
+        f"Room category: {scenario.get('Room category','')}",
+        f"Guests: {scenario.get('Number of guests','')}",
+        f"Arrival: {scenario.get('Arrival','')}",
+        f"Departure: {scenario.get('Departure','')}",
+        f"Nights: {scenario.get('Nights','')}",
+        f"Extra services: {scenario.get('Extra services','')}",
+        "",
+        "FOLLOW-UPS",
+        "----------",
+    ]
 
     if followup:
-        content += f"\n- {finished_at}: {followup}\n"
+        lines.append(f"- {finished_at}: {followup}")
 
-    return content
+    return "\n".join(lines)
+
