@@ -29,7 +29,7 @@ def render_help_tab() -> None:
     st.markdown(
     "<div style='margin-top:4px;'>"
     "<a href='https://github.com/balzamas/pms_trainer/issues' target='_blank'>"
-    "Report a bug or suggest an improvement (GitHub Issues)"
+    "To see planned features, report a bug or suggest an improvement (GitHub Issues)"
     "</a>"
     "</div>",
     unsafe_allow_html=True
