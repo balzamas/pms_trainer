@@ -224,31 +224,21 @@ def render_task_text(
     finished_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     guest_comment = scenario.get("Guest comment", "")
-    guest_comment_line = f" | Guest comment: {guest_comment}" if guest_comment else ""
+    guest_comment_part = f" | Comment: {guest_comment}" if guest_comment else ""
 
     lines = [
-        "PMS TRAINING TASK",
-        "=================",
-        f"TASK ID: {generated_id}",
-        f"Booking number: {booking_number}",
-        f"Finished at: {finished_at}",
+        f"PMS TRAINING TASK | ID: {generated_id} | Booking: {booking_number} | Finished: {finished_at}",
         "",
-        "SCENARIO",
-        "--------",
-        f"Guest name: {scenario.get('Guest name','')}{guest_comment_line}",
-        f"Room category: {scenario.get('Room category','')}",
+        f"Guest: {scenario.get('Guest name','')}{guest_comment_part}",
+        f"Room: {scenario.get('Room category','')}",
         f"Guests: {scenario.get('Number of guests','')}",
-        f"Arrival: {scenario.get('Arrival','')}",
-        f"Departure: {scenario.get('Departure','')}",
-        f"Nights: {scenario.get('Nights','')}",
-        f"Extra services: {scenario.get('Extra services','')}",
-        "",
-        "FOLLOW-UPS",
-        "----------",
+        f"Arrival: {scenario.get('Arrival','')} | Departure: {scenario.get('Departure','')} | Nights: {scenario.get('Nights','')}",
+        f"Extras: {scenario.get('Extra services','')}",
     ]
 
     if followup:
-        lines.append(f"- {finished_at}: {followup}")
+        lines.append(f"Follow-up: {followup}")
 
     return "\n".join(lines)
+
 
