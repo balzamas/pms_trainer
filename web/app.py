@@ -579,9 +579,6 @@ elif page == "Scenario":
                     unsafe_allow_html=True
                 )
 
-
-                st.divider()
-
                 items = [x.strip() for x in str(extra_services).split(",") if x.strip()] if extra_services else []
                 if not items or extra_services == "(none)":
                     items = ["None"]
