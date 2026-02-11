@@ -179,7 +179,7 @@ def generate_scenario(cfg: dict) -> dict:
         "Guest name": guest["full_name"],
         "Guest comment": str(guest.get("comment", "")).strip(),
         "Room category": category["name"],
-        "Number of guests": guests_count,
+        "Number1 of guests": guests_count,
         "Arrival": arrival.isoformat(),
         "Departure": departure.isoformat(),
         "Nights": nights,
