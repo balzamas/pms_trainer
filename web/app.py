@@ -557,27 +557,27 @@ elif page == "Scenario":
                     c2.markdown(str(value) if value is not None else "")
                 
                     
-                    st.markdown(
-                        dedent(f"""
-                        <div style="display:grid; grid-template-columns: 180px 1fr; row-gap:4px; column-gap:10px; line-height:1.25;">
-                          <div style="padding:4px;"><strong>Room type</strong></div>
-                          <div style="padding:4px;">{scenario.get("Room category","")}</div>
-                    
-                          <div style="background:rgba(0,0,0,0.03); padding:4px;"><strong>Guests</strong></div>
-                          <div style="background:rgba(0,0,0,0.03); padding:4px;">{scenario.get("Number of guests","")}</div>
-                    
-                          <div style="padding:4px;"><strong>Nights</strong></div>
-                          <div style="padding:4px;">{scenario.get("Nights","")}</div>
-                    
-                          <div style="background:rgba(0,0,0,0.03); padding:4px;"><strong>Arrival</strong></div>
-                          <div style="background:rgba(0,0,0,0.03); padding:4px;">{scenario.get("Arrival","")}</div>
-                    
-                          <div style="padding:4px;"><strong>Departure</strong></div>
-                          <div style="padding:4px;">{scenario.get("Departure","")}</div>
-                        </div>
-                        """).strip(),
-                        unsafe_allow_html=True
-                    )
+                st.markdown(
+                    dedent(f"""
+                    <div style="display:grid; grid-template-columns: 180px 1fr; row-gap:4px; column-gap:10px; line-height:1.25;">
+                      <div style="padding:4px;"><strong>Room type</strong></div>
+                      <div style="padding:4px;">{scenario.get("Room category","")}</div>
+                
+                      <div style="background:rgba(0,0,0,0.03); padding:4px;"><strong>Guests</strong></div>
+                      <div style="background:rgba(0,0,0,0.03); padding:4px;">{scenario.get("Number of guests","")}</div>
+                
+                      <div style="padding:4px;"><strong>Nights</strong></div>
+                      <div style="padding:4px;">{scenario.get("Nights","")}</div>
+                
+                      <div style="background:rgba(0,0,0,0.03); padding:4px;"><strong>Arrival</strong></div>
+                      <div style="background:rgba(0,0,0,0.03); padding:4px;">{scenario.get("Arrival","")}</div>
+                
+                      <div style="padding:4px;"><strong>Departure</strong></div>
+                      <div style="padding:4px;">{scenario.get("Departure","")}</div>
+                    </div>
+                    """).strip(),
+                    unsafe_allow_html=True
+                )
 
 
                 st.divider()
