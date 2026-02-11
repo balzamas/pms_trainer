@@ -563,12 +563,13 @@ elif page == "Scenario":
 
                 st.divider()
 
-                st.markdown("**Requests & extras**")
-                if extra_services and extra_services != "(none)":
-                    for s in [x.strip() for x in str(extra_services).split(",") if x.strip()]:
-                        st.markdown(f"- {s}")
-                else:
-                    st.markdown("- None")
+                items = [x.strip() for x in str(extra_services).split(",") if x.strip()] if extra_services else []
+                if not items or extra_services == "(none)":
+                    items = ["None"]
+                
+                st.markdown("**Requests & extras**", help=None)
+                st.markdown("\n".join([f"- {s}" for s in items]))
+
         else:
             st.info("Click **New scenario** to generate a scenario.")
 
