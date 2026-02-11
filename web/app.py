@@ -490,7 +490,7 @@ with col_title:
     st.markdown("## ReservoDojo")
     st.caption("Practice real reservations")
 
-page = st.radio("Menu", ["Scenario", "Config", "Task history", "Help"], horizontal=True)
+page = st.radio("Menu", ["Scenario", "Config", "Review", "Help"], horizontal=True)
 
 if page == "Config":
     updated_cfg, save_clicked = config_editor(cfg)
@@ -646,18 +646,18 @@ elif page == "Scenario":
                 st.toast(f"Follow-up for booking {booking_number.strip()}: {followup}", icon="⚠️")
                 st.warning(f"Follow-up: {followup}")
 
-elif page == "Task history":
-    st.subheader("Task history (latest 50)")
+elif page == "Review":
+    st.subheader("Review (latest 50)")
 
     try:
         sb = get_authed_sb()
         rows = db.list_tasks(sb, st.session_state["user_id"], limit=50)
     except Exception as e:
-        st.error(f"Could not load task history: {e}")
+        st.error(f"Could not load scenario for review: {e}")
         st.stop()
 
     if not rows:
-        st.info("No tasks saved yet.")
+        st.info("No scenario saved yet.")
         st.stop()
 
     hide_okay = st.checkbox("Hide tasks marked 'okay'", value=True)
