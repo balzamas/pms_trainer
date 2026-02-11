@@ -624,9 +624,9 @@ elif page == "Scenario":
                     scenario_json=st.session_state["scenario"],
                     followup_text=followup,
                 )
-                st.success("Saved task result to database.")
+                st.success("Saved scenario result to database.")
             except Exception as e:
-                st.error(f"Saving task failed: {e}")
+                st.error(f"Saving scenario failed: {e}")
                 st.stop()
 
             txt = render_task_text(
@@ -639,7 +639,7 @@ elif page == "Scenario":
             st.download_button(
                 "Download scenario (TXT)",
                 data=txt,
-                file_name=f"PMS_Task_{st.session_state['generated_id']}_BN-{booking_number.strip()}.txt",
+                file_name=f"PMS_Scenario_{st.session_state['generated_id']}_BN-{booking_number.strip()}.txt",
             )
 
             if followup:
@@ -660,7 +660,7 @@ elif page == "Review":
         st.info("No scenario saved yet.")
         st.stop()
 
-    hide_okay = st.checkbox("Hide tasks marked 'okay'", value=True)
+    hide_okay = st.checkbox("Hide scenarios marked 'okay'", value=True)
 
     def _date_only(ts: str) -> str:
         try:
@@ -796,7 +796,7 @@ elif page == "Review":
     st.download_button(
         "Download TXT",
         data=txt,
-        file_name=f"PMS_Task_{r.get('generated_id','task')}_BN-{r.get('booking_number','')}.txt",
+        file_name=f"PMS_Scenario_{r.get('generated_id','task')}_BN-{r.get('booking_number','')}.txt",
         key=f"dl_{task_id}",
     )
     
