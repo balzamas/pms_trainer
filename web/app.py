@@ -554,16 +554,24 @@ elif page == "Scenario":
                     c1, c2 = st.columns([1, 3])
                     c1.markdown(f"**{label}**")
                     c2.markdown(str(value) if value is not None else "")
-
+                
                 st.markdown(
                     f"""
-                **Room type**: {scenario.get("Room category", "")}  
-                **Guests**: {scenario.get("Number of guests", "")}  
-                **Nights**: {scenario.get("Nights", "")}  
-                **Arrival**: {scenario.get("Arrival", "")}  
-                **Departure**: {scenario.get("Departure", "")}
-                """.strip()
+                    <div style="display:grid;
+                                grid-template-columns: 180px 1fr;
+                                row-gap:4px;
+                                column-gap:10px;
+                                line-height:1.2;">
+                        <div><strong>Room type</strong></div><div>{scenario.get("Room category","")}</div>
+                        <div><strong>Guests</strong></div><div>{scenario.get("Number of guests","")}</div>
+                        <div><strong>Nights</strong></div><div>{scenario.get("Nights","")}</div>
+                        <div><strong>Arrival</strong></div><div>{scenario.get("Arrival","")}</div>
+                        <div><strong>Departure</strong></div><div>{scenario.get("Departure","")}</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
                 )
+
 
 
 
