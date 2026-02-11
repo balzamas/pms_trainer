@@ -557,20 +557,32 @@ elif page == "Scenario":
                 
                 st.markdown(
                     f"""
-                    <div style="display:grid;
-                                grid-template-columns: 180px 1fr;
-                                row-gap:4px;
-                                column-gap:10px;
-                                line-height:1.2;">
-                        <div><strong>Room type</strong></div><div>{scenario.get("Room category","")}</div>
-                        <div><strong>Guests</strong></div><div>{scenario.get("Number of guests","")}</div>
-                        <div><strong>Nights</strong></div><div>{scenario.get("Nights","")}</div>
-                        <div><strong>Arrival</strong></div><div>{scenario.get("Arrival","")}</div>
-                        <div><strong>Departure</strong></div><div>{scenario.get("Departure","")}</div>
+                    <div style="
+                        display:grid;
+                        grid-template-columns: 180px 1fr;
+                        row-gap:4px;
+                        column-gap:10px;
+                        line-height:1.25;
+                    ">
+                        <div style="padding:4px;"><strong>Room type</strong></div>
+                        <div style="padding:4px;">{scenario.get("Room category","")}</div>
+                
+                        <div style="background:#f5f5f5; padding:4px;"><strong>Guests</strong></div>
+                        <div style="background:#f5f5f5; padding:4px;">{scenario.get("Number of guests","")}</div>
+                
+                        <div style="padding:4px;"><strong>Nights</strong></div>
+                        <div style="padding:4px;">{scenario.get("Nights","")}</div>
+                
+                        <div style="background:#f5f5f5; padding:4px;"><strong>Arrival</strong></div>
+                        <div style="background:#f5f5f5; padding:4px;">{scenario.get("Arrival","")}</div>
+                
+                        <div style="padding:4px;"><strong>Departure</strong></div>
+                        <div style="padding:4px;">{scenario.get("Departure","")}</div>
                     </div>
                     """,
                     unsafe_allow_html=True
                 )
+
 
 
 
