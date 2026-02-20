@@ -95,16 +95,15 @@ def require_auth_or_login() -> None:
 
 
 def ensure_membership_loaded() -> None:
-    """
-    Loads accommodation_id + role into session_state after login.
-    """
     if st.session_state.get("accommodation_id") and st.session_state.get("role"):
         return
 
     sb = get_authed_sb()
     mem = db.get_my_membership(sb, st.session_state["user_id"])
+
     if not mem:
-        st.error("Your account is not linked to an accommodation. Please contact your admin.")
+        st.error("This user is not linked to any accommodation yet.")
+        st.info("Log in with the admin user (the one who created the accommodation) and create this user from the Users tab.")
         st.stop()
 
     st.session_state["accommodation_id"] = mem["accommodation_id"]
