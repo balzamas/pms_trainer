@@ -588,11 +588,29 @@ if page == "Users":
     try:
         sb = get_authed_sb()
         members = db.list_members(sb, accommodation_id)
+
         if not members:
             st.info("No members yet.")
         else:
-            df = pd.DataFrame(members)
+            profiles = db.get_profiles_for_accommodation(sb, accommodation_id)
+
+            rows = []
+            for m in members:
+                uid = str(m.get("user_id") or "")
+                prof = profiles.get(uid, {})
+
+                rows.append(
+                    {
+                        "Name": prof.get("display_name") or "Unknown",
+                        "Email": prof.get("email") or "",
+                        "Role": m.get("role") or "",
+                        "Added": str(m.get("created_at") or "")[:10],
+                    }
+                )
+
+            df = pd.DataFrame(rows)
             st.dataframe(df, use_container_width=True, hide_index=True)
+
     except Exception as e:
         st.error(f"Could not load members: {e}")
 
