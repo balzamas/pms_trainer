@@ -1,3 +1,4 @@
+# db.py
 from __future__ import annotations
 
 from typing import Optional, Any
@@ -66,16 +67,22 @@ class DB:
         Supabase may rotate refresh tokens. If that happens and Streamlit's session_state
         keeps the old refresh token, you can get: "Invalid Refresh Token: Already Used".
 
-        This function tries to detect rotation and update st.session_state if available.
+        This function detects rotation and updates st.session_state if available.
+
+        CRITICAL CHANGE:
+        If session cannot be applied/refreshed, we RAISE instead of returning an unauthed client.
+        Returning an unauthed client causes silent write failures after idle.
         """
         sb = self.client()
 
         # set_session may return an AuthResponse (object) or dict-like response
         try:
             auth_res = sb.auth.set_session(access_token, refresh_token)
-        except Exception:
-            # If set_session itself fails, still return client; caller will see errors on queries.
-            return sb
+        except Exception as e:
+            raise RuntimeError(
+                "Session expired or refresh failed. User must log in again. "
+                f"Details: {repr(e)}"
+            )
 
         session = self._extract_session(auth_res)
         if session is not None:
@@ -108,8 +115,7 @@ class DB:
         except Exception as e:
             raise RuntimeError(f"Supabase get_config failed: {repr(e)}")
 
-        # ✅ IMPORTANT: For robustness, treat None as "no config yet"
-        # (instead of crashing the whole app). App will create default_config().
+        # Treat None as "no config yet"
         if res is None:
             return None
 
