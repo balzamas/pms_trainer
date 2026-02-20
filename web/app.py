@@ -553,6 +553,7 @@ if page == "Users":
     st.subheader("User administration")
 
     with st.form("create_user_form"):
+        new_name = st.text_input("Name")
         new_email = st.text_input("Email")
         new_password = st.text_input("Password", type="password")
         new_role = st.radio("Role", options=["user", "admin"], index=0, horizontal=True)
@@ -574,6 +575,9 @@ if page == "Users":
             sb = get_authed_sb()
             db.add_membership(sb, accommodation_id, new_user_id, new_role)
 
+            sb_admin = db.admin_client()
+            db.upsert_profile(sb_admin, new_user_id, new_name.strip() or new_email.strip(), new_email.strip())
+            
             st.success(f"Created user {new_email.strip()} with role '{new_role}'.")
         except Exception as e:
             st.error(f"Could not create user: {e}")
@@ -782,6 +786,11 @@ elif page == "Review":
             continue
 
         sc = r.get("scenario_json", {}) or {}
+
+        profiles = db.get_profiles_for_accommodation(sb, accommodation_id)
+        created_by = str(r.get("created_by") or "")
+        created_name = profiles.get(created_by, {}).get("display_name", "Unknown")
+
         table_rows.append(
             {
                 "Finished": _date_only(r.get("finished_at", "")),
@@ -789,7 +798,7 @@ elif page == "Review":
                 "Booking number": r.get("booking_number", ""),
                 "Guest name": sc.get("Guest name", ""),
                 "Room type": sc.get("Room category", ""),
-                "Created by": (r.get("created_by") or "")[:8],
+                "Created by": created_name,
                 "Follow-up": r.get("followup_text") or "",
             }
         )
