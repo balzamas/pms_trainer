@@ -172,27 +172,44 @@ class DB:
 
     def get_my_membership(self, sb: Client, user_id: str) -> Optional[dict]:
         """
-        Returns: {accommodation_id, role} or None if no membership found.
+        Returns {accommodation_id, role} or None if no membership exists.
+    
+        IMPORTANT: postgrest-py sometimes throws Error 204 "Missing response"
+        instead of returning an empty result. We treat that as 'no membership'.
         """
         try:
             res = (
                 sb.table("memberships")
                 .select("accommodation_id, role")
                 .eq("user_id", user_id)
-                .maybe_single()
+                .limit(1)
                 .execute()
             )
         except Exception as e:
+            msg = str(e)
+            # Treat all these as "no membership row yet"
+            if "Error 204" in msg or "Missing response" in msg or "No Content" in msg:
+                return None
+            # Anything else is a real problem
             raise RuntimeError(f"Supabase get_my_membership failed: {repr(e)}")
-
+    
         if res is None:
             return None
+    
         err = getattr(res, "error", None)
         if err:
+            # Some versions represent 'no rows' oddly — treat as None
+            if "0 rows" in str(err) or "No rows" in str(err):
+                return None
             raise RuntimeError(f"Supabase get_my_membership error: {err}")
-
-        data = getattr(res, "data", None)
-        return data if isinstance(data, dict) and data else None
+    
+        data = getattr(res, "data", None) or []
+        if isinstance(data, list) and data and isinstance(data[0], dict):
+            row = data[0]
+            if row.get("accommodation_id") and row.get("role"):
+                return row
+    
+        return None
 
     def list_members(self, sb: Client, accommodation_id: str) -> list[dict]:
         try:
