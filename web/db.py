@@ -136,6 +136,26 @@ class DB:
         return str(user_id)
 
     # ---------- accommodation + membership ----------
+    def get_profiles_by_ids(self, sb: Client, user_ids: list[str]) -> dict[str, dict]:
+        if not user_ids:
+            return {}
+        try:
+            res = sb.table("profiles").select("user_id, display_name, email").in_("user_id", user_ids).execute()
+        except Exception as e:
+            raise RuntimeError(f"Supabase get_profiles_by_ids failed: {repr(e)}")
+    
+        if res is None:
+            return {}
+        err = getattr(res, "error", None)
+        if err:
+            raise RuntimeError(f"Supabase get_profiles_by_ids error: {err}")
+    
+        out: dict[str, dict] = {}
+        for r in (res.data or []):
+            if isinstance(r, dict) and r.get("user_id"):
+                out[str(r["user_id"])] = r
+        return out
+    
     def upsert_profile(self, sb: Client, user_id: str, display_name: str, email: Optional[str] = None) -> None:
         try:
             payload = {"user_id": user_id, "display_name": display_name}
