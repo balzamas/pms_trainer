@@ -1,15 +1,16 @@
+# app.py
 from __future__ import annotations
 
 import json
 from datetime import datetime
 from typing import Optional
+from pathlib import Path
+from textwrap import dedent
 
 import pandas as pd
 import streamlit as st
 
 from db import DB
-from pathlib import Path
-from textwrap import dedent
 
 APP_DIR = Path(__file__).resolve().parent
 LOGO_PATH = APP_DIR / "assets" / "reservodojo-logo.png"
@@ -39,12 +40,14 @@ from help_ui import render_help_tab, render_login_explanation
 
 # -------------------- auth helpers --------------------
 
+
 def _set_session_from_auth(auth_res) -> None:
     """
     Stores tokens/user in session_state.
     Works with supabase-py v2 where auth responses are objects (AuthResponse),
     and also tolerates dict-like shapes.
     """
+
     def pick(obj, attr: str):
         if obj is None:
             return None
@@ -73,6 +76,7 @@ def _set_session_from_auth(auth_res) -> None:
 
 
 def is_logged_in() -> bool:
+    # Presence-only check (validity checked in require_auth_or_login)
     return bool(
         st.session_state.get("access_token")
         and st.session_state.get("refresh_token")
@@ -111,7 +115,6 @@ def login_ui():
 
     render_login_explanation()
 
-    
     tab_login, tab_signup = st.tabs(["Login", "Create account"])
 
     with tab_login:
@@ -132,46 +135,58 @@ def login_ui():
         if st.button("Create account", type="primary"):
             try:
                 res = db.sign_up(email2.strip(), password2)
-    
+
                 # Works for AuthResponse objects and dict-like responses
                 session = getattr(res, "session", None)
                 if session is None and isinstance(res, dict):
                     session = res.get("session")
-    
+
                 # Some versions wrap in `.data`
                 if session is None:
                     data = getattr(res, "data", None)
                     session = getattr(data, "session", None)
                     if session is None and isinstance(data, dict):
                         session = data.get("session")
-    
+
                 if session:
                     _set_session_from_auth(res)
                     st.success("Account created and logged in.")
                     st.rerun()
                 else:
                     st.info("Account created. Check your email to confirm, then log in.")
-    
+
             except Exception as e:
                 st.error(f"Sign up failed: {e}")
 
 
 # -------------------- DB-backed config --------------------
 
+
 def get_authed_sb():
-    # NOTE: if your Supabase uses refresh-token rotation, consider updating
-    # st.session_state tokens inside db.authed_client / get_authed_sb as discussed.
+    # DB.authed_client raises if session cannot be applied/refreshed.
     return db.authed_client(st.session_state["access_token"], st.session_state["refresh_token"])
+
+
+def require_auth_or_login() -> None:
+    """
+    Enforces a *valid* Supabase session (not just tokens present).
+    If expired/invalid, show login UI and stop WITHOUT clearing scenario.
+    """
+    if not is_logged_in():
+        login_ui()
+        st.stop()
+
+    try:
+        sb = get_authed_sb()
+        sb.auth.get_user()  # validate current access token/session
+    except Exception:
+        st.warning("Your session expired. Please log in again.")
+        login_ui()
+        st.stop()
 
 
 def load_or_init_config() -> dict:
     sb = get_authed_sb()
-
-    try:
-        _ = sb.auth.get_user()
-    except Exception as e:
-        st.error(f"DEBUG auth.get_user failed: {repr(e)}")
-        st.stop()
 
     user_id = st.session_state["user_id"]
 
@@ -190,6 +205,7 @@ def save_config(cfg: dict) -> None:
 
 
 # -------------------- Config editor helpers --------------------
+
 
 def _ensure_df(value, columns: list[str], empty_row: dict) -> pd.DataFrame:
     """Convert whatever is in session_state into a clean DataFrame."""
@@ -425,6 +441,7 @@ def config_editor(cfg: dict) -> tuple[dict, bool]:
     save_clicked = st.button("Save config", type="primary", disabled=bool(errors))
     return cfg, save_clicked
 
+
 def apply_difficulty_to_cfg(cfg: dict, difficulty: str) -> dict:
     """
     Returns a modified copy of cfg depending on difficulty.
@@ -444,9 +461,7 @@ def apply_difficulty_to_cfg(cfg: dict, difficulty: str) -> dict:
         # optional: also clear types to avoid confusion
         effective["breakfast_types"] = []
 
-        # Note: room-category extras are inside room_categories; scenario.py already
-        # caps those to 1 but we want NONE for medium/easy.
-        # Easiest: remove category_extras from each room category copy.
+        # Remove room-category extras for medium/easy
         roomcats = []
         for c in effective.get("room_categories", []) or []:
             c2 = dict(c)
@@ -460,13 +475,13 @@ def apply_difficulty_to_cfg(cfg: dict, difficulty: str) -> dict:
 
     return effective
 
+
 # -------------------- main UI --------------------
 
 st.set_page_config(page_title="ReservoDojo", layout="wide")
 
-if not is_logged_in():
-    login_ui()
-    st.stop()
+# Enforce valid session (or show login) WITHOUT clearing current scenario.
+require_auth_or_login()
 
 with st.sidebar:
     st.write(f"**Logged in:** {st.session_state.get('user_email', '')}")
@@ -497,6 +512,9 @@ if page == "Config":
     st.session_state["cfg"] = updated_cfg
     if save_clicked:
         try:
+            # Ensure session valid before write
+            require_auth_or_login()
+
             save_config(updated_cfg)
 
             # Reset editor state so next render seeds from saved cfg
@@ -512,7 +530,6 @@ elif page == "Scenario":
     col1, col2 = st.columns([2, 1], gap="large")
 
     with col1:
-        # Difficulty selection + New scenario button side-by-side
         b1, b2 = st.columns([2, 3], vertical_alignment="bottom")
 
         with b1:
@@ -536,7 +553,6 @@ elif page == "Scenario":
             st.session_state["generated_id"] = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             st.session_state["followup"] = None
 
-
         scenario = st.session_state.get("scenario")
         if scenario:
             st.subheader("Scenario details")
@@ -551,32 +567,28 @@ elif page == "Scenario":
 
                 st.divider()
 
-                def row(label, value):
-                    c1, c2 = st.columns([1, 3])
-                    c1.markdown(f"**{label}**")
-                    c2.markdown(str(value) if value is not None else "")
-                
-                    
                 st.markdown(
-                    dedent(f"""
+                    dedent(
+                        f"""
                     <div style="display:grid; grid-template-columns: 180px 1fr; row-gap:4px; column-gap:10px; line-height:1.25;">
                       <div style="padding:4px;"><strong>Room type</strong></div>
                       <div style="padding:4px;">{scenario.get("Room category","")}</div>
-                
+
                       <div style="background:rgba(0,0,0,0.03); padding:4px;"><strong>Guests</strong></div>
                       <div style="background:rgba(0,0,0,0.03); padding:4px;">{scenario.get("Number of guests","")}</div>
-                
+
                       <div style="padding:4px;"><strong>Nights</strong></div>
                       <div style="padding:4px;">{scenario.get("Nights","")}</div>
-                
+
                       <div style="background:rgba(0,0,0,0.03); padding:4px;"><strong>Arrival</strong></div>
                       <div style="background:rgba(0,0,0,0.03); padding:4px;">{scenario.get("Arrival","")}</div>
-                
+
                       <div style="padding:4px;"><strong>Departure</strong></div>
                       <div style="padding:4px;">{scenario.get("Departure","")}</div>
                     </div>
-                    """).strip(),
-                    unsafe_allow_html=True
+                    """
+                    ).strip(),
+                    unsafe_allow_html=True,
                 )
 
                 st.divider()
@@ -584,10 +596,9 @@ elif page == "Scenario":
                 items = [x.strip() for x in str(extra_services).split(",") if x.strip()] if extra_services else []
                 if not items or extra_services == "(none)":
                     items = ["None"]
-                
+
                 st.markdown("**Requests & extras**", help=None)
                 st.markdown("\n".join([f"- {s}" for s in items]))
-
         else:
             st.info("Click **New scenario** to generate a scenario.")
 
@@ -607,12 +618,14 @@ elif page == "Scenario":
                 st.error("Please enter a booking number.")
                 st.stop()
 
+            # Enforce valid session right before write
+            require_auth_or_login()
+
             effective_cfg = st.session_state.get("scenario_cfg") or cfg
 
             followup: Optional[str] = None
             if should_generate_followup(effective_cfg):
                 followup = pick_random_followup(effective_cfg)
-
 
             try:
                 sb = get_authed_sb()
@@ -650,6 +663,7 @@ elif page == "Review":
     st.subheader("Review (latest 50)")
 
     try:
+        require_auth_or_login()
         sb = get_authed_sb()
         rows = db.list_tasks(sb, st.session_state["user_id"], limit=50)
     except Exception as e:
@@ -740,6 +754,7 @@ elif page == "Review":
 
     if new_status != current_status:
         try:
+            require_auth_or_login()
             sb2 = get_authed_sb()
             db.update_task_review_status(sb2, task_id, new_status)
             st.success("Saved trainer review.")
@@ -799,6 +814,6 @@ elif page == "Review":
         file_name=f"PMS_Scenario_{r.get('generated_id','task')}_BN-{r.get('booking_number','')}.txt",
         key=f"dl_{task_id}",
     )
-    
+
 elif page == "Help":
     render_help_tab()
