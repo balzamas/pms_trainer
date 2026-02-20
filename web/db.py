@@ -136,7 +136,59 @@ class DB:
         return str(user_id)
 
     # ---------- accommodation + membership ----------
+    def upsert_profile(self, sb: Client, user_id: str, display_name: str, email: Optional[str] = None) -> None:
+        try:
+            payload = {"user_id": user_id, "display_name": display_name}
+            if email is not None:
+                payload["email"] = email
+            res = sb.table("profiles").upsert(payload, on_conflict="user_id").execute()
+        except Exception as e:
+            raise RuntimeError(f"Supabase upsert_profile failed: {repr(e)}")
+    
+        if res is None:
+            raise RuntimeError("Supabase upsert_profile failed: execute() returned None.")
+        err = getattr(res, "error", None)
+        if err:
+            raise RuntimeError(f"Supabase upsert_profile error: {err}")
+    
+    
+    def get_profiles_for_accommodation(self, sb: Client, accommodation_id: str) -> dict[str, dict]:
+        """
+        Returns dict keyed by user_id: { user_id: {display_name, email}, ... }
+        """
+        try:
+            # Get member user_ids
+            mem_res = (
+                sb.table("memberships")
+                .select("user_id")
+                .eq("accommodation_id", accommodation_id)
+                .execute()
+            )
+        except Exception as e:
+            raise RuntimeError(f"Supabase get_profiles_for_accommodation memberships failed: {repr(e)}")
+    
+        if mem_res is None or getattr(mem_res, "error", None):
+            raise RuntimeError(f"Supabase memberships fetch error: {getattr(mem_res, 'error', None)}")
+    
+        member_ids = [r["user_id"] for r in (mem_res.data or []) if isinstance(r, dict) and r.get("user_id")]
+        if not member_ids:
+            return {}
+    
+        try:
+            prof_res = sb.table("profiles").select("user_id, display_name, email").in_("user_id", member_ids).execute()
+        except Exception as e:
+            raise RuntimeError(f"Supabase profiles fetch failed: {repr(e)}")
+    
+        if prof_res is None or getattr(prof_res, "error", None):
+            raise RuntimeError(f"Supabase profiles fetch error: {getattr(prof_res, 'error', None)}")
+    
+        out: dict[str, dict] = {}
+        for r in (prof_res.data or []):
+            if isinstance(r, dict) and r.get("user_id"):
+                out[str(r["user_id"])] = r
+        return out
 
+    
     def create_accommodation(self, sb: Client, name: str) -> str:
         try:
             res = sb.table("accommodations").insert({"name": name}).execute()
