@@ -215,33 +215,49 @@ class DB:
         return res.data or []
 
     # ---------- configs (per accommodation) ----------
-
+    
     def get_config(self, sb: Client, accommodation_id: str) -> Optional[dict]:
+        """
+        Returns config_json dict or None if no config row exists yet.
+    
+        Avoid maybe_single() because some postgrest-py/supabase-py combos
+        throw on 204 No Content ("Missing response") instead of returning None.
+        """
         try:
             res = (
                 sb.table("configs")
                 .select("config_json")
                 .eq("accommodation_id", accommodation_id)
-                .maybe_single()
+                .limit(1)
                 .execute()
             )
         except Exception as e:
+            msg = str(e)
+            status = getattr(e, "status_code", None) or getattr(e, "status", None)
+            # Treat common "no row" / 204 shapes as None
+            if (
+                status == 204
+                or "Error 204" in msg
+                or "Missing response" in msg
+                or "No Content" in msg
+            ):
+                return None
             raise RuntimeError(f"Supabase get_config failed: {repr(e)}")
-
+    
         if res is None:
             return None
-
+    
         err = getattr(res, "error", None)
         if err:
+            err_msg = str(err)
+            if "0 rows" in err_msg or "No rows" in err_msg:
+                return None
             raise RuntimeError(f"Supabase get_config error: {err}")
-
-        data = getattr(res, "data", None)
-        if not data:
-            return None
-
-        if isinstance(data, dict):
-            return data.get("config_json")
-
+    
+        data = getattr(res, "data", None) or []
+        if isinstance(data, list) and data and isinstance(data[0], dict):
+            return data[0].get("config_json")
+    
         return None
 
     def upsert_config(self, sb: Client, accommodation_id: str, config_json: dict) -> None:
