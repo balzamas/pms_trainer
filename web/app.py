@@ -805,7 +805,8 @@ elif page == "Review":
 
         sc = r.get("scenario_json", {}) or {}
 
-        profiles = db.get_profiles_for_accommodation(sb, accommodation_id)
+        needed_user_ids = sorted({str(r.get("created_by") or "") for r in rows if r.get("created_by")})
+        profiles = db.get_profiles_by_ids(sb, needed_user_ids)  # new helper
         created_by = str(r.get("created_by") or "")
         created_name = profiles.get(created_by, {}).get("display_name", "Unknown")
 
