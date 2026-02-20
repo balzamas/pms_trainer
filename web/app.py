@@ -204,9 +204,7 @@ def login_ui():
                 # 2) set session_state from auth
                 _set_session_from_auth(res)
 
-                # 3) create accommodation + admin membership (using authed client; allow insert via RLS? We haven't yet.
-                # Easiest: do it with service role OR temporarily allow inserts.
-                # We'll do it with the logged-in user + RLS requires a membership to insert membership, so bootstrap with admin client:
+                # 3) bootstrap with service role
                 sb_admin = db.admin_client()
 
                 # Create accommodation as service role
@@ -226,6 +224,20 @@ def login_ui():
                 )
                 if mem_res is None or getattr(mem_res, "error", None):
                     raise RuntimeError(f"Could not create admin membership: {getattr(mem_res, 'error', None)}")
+
+                # ------------------ NEW: create default config as service role ------------------
+                cfg0 = default_config()
+                cfg_res = (
+                    sb_admin.table("configs")
+                    .upsert(
+                        {"accommodation_id": accommodation_id, "config_json": cfg0},
+                        on_conflict="accommodation_id",
+                    )
+                    .execute()
+                )
+                if cfg_res is None or getattr(cfg_res, "error", None):
+                    raise RuntimeError(f"Could not create default config: {getattr(cfg_res, 'error', None)}")
+                # -------------------------------------------------------------------------------
 
                 st.session_state["accommodation_id"] = accommodation_id
                 st.session_state["role"] = "admin"
