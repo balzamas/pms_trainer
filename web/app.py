@@ -539,8 +539,8 @@ with col_title:
 
 menu_options = ["Scenario", "Review", "Help"]
 if role == "admin":
-    menu_options.insert(1, "Config")
-    menu_options.insert(2, "Users")
+    menu_options.insert(2, "Config")
+    menu_options.insert(3, "Users")
 
 page = st.radio("Menu", menu_options, horizontal=True)
 
