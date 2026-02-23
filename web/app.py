@@ -552,11 +552,12 @@ if page == "Users":
 
     st.subheader("User administration")
 
+    # --- create user form ---
     with st.form("create_user_form"):
-        new_name = st.text_input("Name")
-        new_email = st.text_input("Email")
-        new_password = st.text_input("Password", type="password")
-        new_role = st.radio("Role", options=["user", "admin"], index=0, horizontal=True)
+        new_name = st.text_input("Name", key="new_user_name")
+        new_email = st.text_input("Email", key="new_user_email")
+        new_password = st.text_input("Password", type="password", key="new_user_password")
+        new_role = st.radio("Role", options=["user", "admin"], index=0, horizontal=True, key="new_user_role")
         submitted = st.form_submit_button("Create user", type="primary")
 
     if submitted:
@@ -577,8 +578,18 @@ if page == "Users":
 
             sb_admin = db.admin_client()
             db.upsert_profile(sb_admin, new_user_id, new_name.strip() or new_email.strip(), new_email.strip())
-            
+
             st.success(f"Created user {new_email.strip()} with role '{new_role}'.")
+
+            # ✅ Clear input fields to prevent accidental double-click duplicates
+            st.session_state["new_user_name"] = ""
+            st.session_state["new_user_email"] = ""
+            st.session_state["new_user_password"] = ""
+            st.session_state["new_user_role"] = "user"
+
+            # Re-render the UI so the cleared fields show immediately
+            st.rerun()
+
         except Exception as e:
             st.error(f"Could not create user: {e}")
 
