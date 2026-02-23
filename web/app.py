@@ -551,7 +551,13 @@ if page == "Users":
         st.stop()
 
     st.subheader("User administration")
-
+    if st.session_state.get("clear_new_user_form"):
+        st.session_state["new_user_name"] = ""
+        st.session_state["new_user_email"] = ""
+        st.session_state["new_user_password"] = ""
+        st.session_state["new_user_role"] = "user"
+        st.session_state.pop("clear_new_user_form", None)
+        
     # --- create user form ---
     with st.form("create_user_form"):
         new_name = st.text_input("Name", key="new_user_name")
@@ -582,10 +588,7 @@ if page == "Users":
             st.success(f"Created user {new_email.strip()} with role '{new_role}'.")
 
             # ✅ Clear input fields to prevent accidental double-click duplicates
-            st.session_state["new_user_name"] = ""
-            st.session_state["new_user_email"] = ""
-            st.session_state["new_user_password"] = ""
-            st.session_state["new_user_role"] = "user"
+            st.session_state["clear_new_user_form"] = True
 
             # Re-render the UI so the cleared fields show immediately
             st.rerun()
