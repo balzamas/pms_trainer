@@ -942,7 +942,7 @@ elif page == "Review":
         st.info("No scenario saved yet.")
         st.stop()
 
-    hide_done_perfect = st.checkbox("Hide scenarios marked 'done' or 'perfect'", value=False)
+    hide_done_perfect = st.checkbox("Hide scenarios marked 'done' or 'perfect'", value=True)
 
     def _date_only(ts: str) -> str:
         try:
@@ -1109,7 +1109,18 @@ elif page == "Progress":
         st.info("No training items configured yet.")
         st.stop()
 
-    progress_df = pd.DataFrame(progress_rows).sort_values(["Type", "Item"]).reset_index(drop=True)
+    row_height = 35
+    header_height = 38
+    max_height = 1200  # optional safety cap
+    
+    table_height = min(header_height + len(progress_df) * row_height, max_height)
+    
+    st.dataframe(
+        progress_df,
+        use_container_width=True,
+        hide_index=True,
+        height=table_height,
+    )
     st.dataframe(progress_df, use_container_width=True, hide_index=True)
 
 # -------------------- HELP --------------------
