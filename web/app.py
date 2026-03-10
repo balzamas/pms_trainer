@@ -320,9 +320,9 @@ def perfect_icon(count: int) -> str:
 
 def progress_score(completed: str, perfect: str) -> int:
     if perfect == "🏆":
-        return 3
+        return 5
     if perfect:
-        return 2
+        return 4
     if completed == "✅":
         return 1
     return 0
@@ -1125,7 +1125,7 @@ elif page == "Progress":
         progress_score(row["Completed"], row["Perfect"])
         for _, row in progress_df.iterrows()
     )
-    max_score = len(progress_df) * 3
+    max_score = len(progress_df) * 5
     score_ratio = current_score / max_score if max_score else 0.0
 
     st.metric("Global score", f"{current_score} / {max_score}")
