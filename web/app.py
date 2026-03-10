@@ -343,9 +343,9 @@ def config_editor(cfg: dict) -> tuple[dict, bool]:
 
     with tabs[1]:
         st.caption("Add/edit guests. Changes are included when you click **Save config**.")
-    
+
         GUESTS_KEY = "guests_editor_df"
-    
+
         if GUESTS_KEY not in st.session_state:
             base = cfg.get("guests", [])
             st.session_state[GUESTS_KEY] = _ensure_df(
@@ -353,39 +353,41 @@ def config_editor(cfg: dict) -> tuple[dict, bool]:
                 columns=["full_name", "comment", "min_guests", "max_guests"],
                 empty_row={"full_name": "", "comment": "", "min_guests": 1, "max_guests": 99},
             )
-    
+
         edited = st.data_editor(
             st.session_state[GUESTS_KEY],
             key="guests_editor_widget",
             use_container_width=True,
             num_rows="dynamic",
             column_config={
-                "full_name": st.column_config.TextColumn("Full name", required=True),
+                "full_name": st.column_config.TextColumn("Full name", required=False),
                 "comment": st.column_config.TextColumn("Comment"),
                 "min_guests": st.column_config.NumberColumn("Min guests", min_value=1, step=1),
                 "max_guests": st.column_config.NumberColumn("Max guests", min_value=1, step=1),
             },
         )
-    
+
         edited = _apply_row_defaults(edited, "full_name", {"min_guests": 1, "max_guests": 99})
-        edited["full_name"] = edited["full_name"].fillna("").astype(str)
-    
+        edited["full_name"] = edited["full_name"].fillna("").astype(str).str.strip()
+
         if "comment" not in edited.columns:
             edited["comment"] = ""
         edited["comment"] = edited["comment"].fillna("").astype(str)
-    
+
         edited["min_guests"] = pd.to_numeric(edited["min_guests"], errors="coerce").fillna(1).astype(int)
         edited["max_guests"] = pd.to_numeric(edited["max_guests"], errors="coerce").fillna(99).astype(int)
-    
+
+        edited = edited[edited["full_name"] != ""].reset_index(drop=True)
+
         st.session_state[GUESTS_KEY] = edited
         cfg["guests"] = edited.to_dict(orient="records")
-    
+
     with tabs[2]:
         st.caption("Add/edit room types. Changes are included when you click **Save config**.")
         st.caption("Type extras will be mixed into the same 'Requests & extras' list during scenario generation.")
-    
+
         ROOMCATS_KEY = "roomcats_editor_df"
-    
+
         if ROOMCATS_KEY not in st.session_state:
             base = cfg.get("room_categories", [])
             st.session_state[ROOMCATS_KEY] = _ensure_df(
@@ -393,14 +395,14 @@ def config_editor(cfg: dict) -> tuple[dict, bool]:
                 columns=["name", "min_guests", "max_guests", "category_extras"],
                 empty_row={"name": "", "min_guests": 1, "max_guests": 99, "category_extras": ""},
             )
-    
+
         edited = st.data_editor(
             st.session_state[ROOMCATS_KEY],
             key="roomcats_editor_widget",
             use_container_width=True,
             num_rows="dynamic",
             column_config={
-                "name": st.column_config.TextColumn("Type name", required=True),
+                "name": st.column_config.TextColumn("Type name", required=False),
                 "min_guests": st.column_config.NumberColumn("Min guests", min_value=1, step=1),
                 "max_guests": st.column_config.NumberColumn("Max guests", min_value=1, step=1),
                 "category_extras": st.column_config.TextColumn(
@@ -409,16 +411,18 @@ def config_editor(cfg: dict) -> tuple[dict, bool]:
                 ),
             },
         )
-    
+
         edited = _apply_row_defaults(edited, "name", {"min_guests": 1, "max_guests": 99})
-        edited["name"] = edited["name"].fillna("").astype(str)
+        edited["name"] = edited["name"].fillna("").astype(str).str.strip()
         edited["min_guests"] = pd.to_numeric(edited["min_guests"], errors="coerce").fillna(1).astype(int)
         edited["max_guests"] = pd.to_numeric(edited["max_guests"], errors="coerce").fillna(99).astype(int)
-    
+
         if "category_extras" not in edited.columns:
             edited["category_extras"] = ""
         edited["category_extras"] = edited["category_extras"].fillna("").astype(str)
-    
+
+        edited = edited[edited["name"] != ""].reset_index(drop=True)
+
         st.session_state[ROOMCATS_KEY] = edited
         cfg["room_categories"] = edited.to_dict(orient="records")
 
@@ -664,7 +668,6 @@ elif page == "Scenario":
             st.session_state["generated_id"] = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             st.session_state["followup"] = None
 
-            # clear old finish messages when generating a fresh scenario
             st.session_state["finish_save_message"] = None
             st.session_state["finish_save_message_type"] = None
             st.session_state["finish_followup_message"] = None
@@ -839,7 +842,39 @@ elif page == "Review":
         st.info("No scenario saved yet.")
         st.stop()
 
-    hide_okay = st.checkbox("Hide scenarios marked 'okay'", value=True)
+    # -------- follow-up progress overview --------
+    configured_followups = [s.strip() for s in cfg.get("follow_up_tasks", []) if str(s).strip()]
+
+    if configured_followups:
+        st.markdown("### Follow-up progress")
+
+        progress_rows = []
+        for followup_label in configured_followups:
+            matching_rows = [
+                r for r in rows
+                if (r.get("followup_text") or "").strip() == followup_label
+            ]
+
+            done_count = sum(1 for r in matching_rows if (r.get("review_status") or "").strip() == "done")
+            perfect_count = sum(1 for r in matching_rows if (r.get("review_status") or "").strip() == "perfect")
+            completed = done_count + perfect_count > 0
+            perfected = perfect_count > 0
+
+            progress_rows.append(
+                {
+                    "Follow-up": followup_label,
+                    "Completed": "✅" if completed else "⬜",
+                    "Perfect": "⭐" if perfected else "",
+                    "Done": done_count,
+                    "Perfect count": perfect_count,
+                }
+            )
+
+        progress_df = pd.DataFrame(progress_rows)
+        st.dataframe(progress_df, use_container_width=True, hide_index=True)
+        st.divider()
+
+    hide_done_perfect = st.checkbox("Hide scenarios marked 'done' or 'perfect'", value=False)
 
     def _date_only(ts: str) -> str:
         try:
@@ -855,7 +890,7 @@ elif page == "Review":
 
     for i, r in enumerate(rows):
         status = (r.get("review_status") or "new").strip()
-        if hide_okay and status == "okay":
+        if hide_done_perfect and status in ("done", "perfect"):
             continue
 
         sc = r.get("scenario_json", {}) or {}
@@ -915,7 +950,7 @@ elif page == "Review":
     task_id = r.get("id")
     current_status = (r.get("review_status") or "new").strip()
 
-    status_options = ["new", "okay", "needs_review"]
+    status_options = ["new", "needs_review", "done", "perfect"]
     new_status = st.radio(
         "Trainer review",
         options=status_options,
