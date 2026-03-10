@@ -1134,7 +1134,7 @@ elif page == "Progress":
         level = "🥋 White Belt"
     elif progress_pct < 40:
         level = "🥋 Yellow Belt"
-    elif progress_pct < 60:
+    elif progress_pct < 65:
         level = "🥋 Green Belt"
     else:
         level = "🥋 Black Belt"
