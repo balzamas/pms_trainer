@@ -342,10 +342,10 @@ def config_editor(cfg: dict) -> tuple[dict, bool]:
         cfg["stay_length_nights"] = stay
 
     with tabs[1]:
-        st.caption("Add/edit guests. Click **Apply changes** when done editing.")
-
+        st.caption("Add/edit guests. Changes are included when you click **Save config**.")
+    
         GUESTS_KEY = "guests_editor_df"
-
+    
         if GUESTS_KEY not in st.session_state:
             base = cfg.get("guests", [])
             st.session_state[GUESTS_KEY] = _ensure_df(
@@ -353,51 +353,39 @@ def config_editor(cfg: dict) -> tuple[dict, bool]:
                 columns=["full_name", "comment", "min_guests", "max_guests"],
                 empty_row={"full_name": "", "comment": "", "min_guests": 1, "max_guests": 99},
             )
-
-        with st.form("guests_form"):
-            edited = st.data_editor(
-                st.session_state[GUESTS_KEY],
-                use_container_width=True,
-                num_rows="dynamic",
-                column_config={
-                    "full_name": st.column_config.TextColumn("Full name", required=True),
-                    "comment": st.column_config.TextColumn("Comment"),
-                    "min_guests": st.column_config.NumberColumn("Min guests", min_value=1, step=1),
-                    "max_guests": st.column_config.NumberColumn("Max guests", min_value=1, step=1),
-                },
-            )
-            apply_guests = st.form_submit_button("Apply changes")
-
-        if apply_guests:
-            edited = _apply_row_defaults(edited, "full_name", {"min_guests": 1, "max_guests": 99})
-            edited["full_name"] = edited["full_name"].fillna("").astype(str)
-            if "comment" not in edited.columns:
-                edited["comment"] = ""
-            edited["comment"] = edited["comment"].fillna("").astype(str)
-
-            edited["min_guests"] = pd.to_numeric(edited["min_guests"], errors="coerce").fillna(1).astype(int)
-            edited["max_guests"] = pd.to_numeric(edited["max_guests"], errors="coerce").fillna(99).astype(int)
-
-            st.session_state[GUESTS_KEY] = edited
-            cfg["guests"] = edited.to_dict(orient="records")
-            st.success("Guests updated in this config (remember to click **Save config**).")
-        else:
-            guests_cfg = st.session_state[GUESTS_KEY].copy()
-            guests_cfg = _apply_row_defaults(guests_cfg, "full_name", {"min_guests": 1, "max_guests": 99})
-            guests_cfg["full_name"] = guests_cfg["full_name"].fillna("").astype(str)
-            if "comment" not in guests_cfg.columns:
-                guests_cfg["comment"] = ""
-            guests_cfg["comment"] = guests_cfg["comment"].fillna("").astype(str)
-            guests_cfg["min_guests"] = pd.to_numeric(guests_cfg["min_guests"], errors="coerce").fillna(1).astype(int)
-            guests_cfg["max_guests"] = pd.to_numeric(guests_cfg["max_guests"], errors="coerce").fillna(99).astype(int)
-            cfg["guests"] = guests_cfg.to_dict(orient="records")
-
+    
+        edited = st.data_editor(
+            st.session_state[GUESTS_KEY],
+            key="guests_editor_widget",
+            use_container_width=True,
+            num_rows="dynamic",
+            column_config={
+                "full_name": st.column_config.TextColumn("Full name", required=True),
+                "comment": st.column_config.TextColumn("Comment"),
+                "min_guests": st.column_config.NumberColumn("Min guests", min_value=1, step=1),
+                "max_guests": st.column_config.NumberColumn("Max guests", min_value=1, step=1),
+            },
+        )
+    
+        edited = _apply_row_defaults(edited, "full_name", {"min_guests": 1, "max_guests": 99})
+        edited["full_name"] = edited["full_name"].fillna("").astype(str)
+    
+        if "comment" not in edited.columns:
+            edited["comment"] = ""
+        edited["comment"] = edited["comment"].fillna("").astype(str)
+    
+        edited["min_guests"] = pd.to_numeric(edited["min_guests"], errors="coerce").fillna(1).astype(int)
+        edited["max_guests"] = pd.to_numeric(edited["max_guests"], errors="coerce").fillna(99).astype(int)
+    
+        st.session_state[GUESTS_KEY] = edited
+        cfg["guests"] = edited.to_dict(orient="records")
+    
     with tabs[2]:
-        st.caption("Add/edit room types. Click **Apply changes** when done editing.")
+        st.caption("Add/edit room types. Changes are included when you click **Save config**.")
         st.caption("Type extras will be mixed into the same 'Requests & extras' list during scenario generation.")
-
+    
         ROOMCATS_KEY = "roomcats_editor_df"
-
+    
         if ROOMCATS_KEY not in st.session_state:
             base = cfg.get("room_categories", [])
             st.session_state[ROOMCATS_KEY] = _ensure_df(
@@ -405,47 +393,34 @@ def config_editor(cfg: dict) -> tuple[dict, bool]:
                 columns=["name", "min_guests", "max_guests", "category_extras"],
                 empty_row={"name": "", "min_guests": 1, "max_guests": 99, "category_extras": ""},
             )
-
-        with st.form("roomcats_form"):
-            edited = st.data_editor(
-                st.session_state[ROOMCATS_KEY],
-                use_container_width=True,
-                num_rows="dynamic",
-                column_config={
-                    "name": st.column_config.TextColumn("Type name", required=True),
-                    "min_guests": st.column_config.NumberColumn("Min guests", min_value=1, step=1),
-                    "max_guests": st.column_config.NumberColumn("Max guests", min_value=1, step=1),
-                    "category_extras": st.column_config.TextColumn(
-                        "Category extras (use ';')",
-                        help="Optional. Example: Baby bed; Extra bed; 2x Children",
-                    ),
-                },
-            )
-            apply_roomcats = st.form_submit_button("Apply changes")
-
-        if apply_roomcats:
-            edited = _apply_row_defaults(edited, "name", {"min_guests": 1, "max_guests": 99})
-            edited["name"] = edited["name"].fillna("").astype(str)
-            edited["min_guests"] = pd.to_numeric(edited["min_guests"], errors="coerce").fillna(1).astype(int)
-            edited["max_guests"] = pd.to_numeric(edited["max_guests"], errors="coerce").fillna(99).astype(int)
-            if "category_extras" not in edited.columns:
-                edited["category_extras"] = ""
-            edited["category_extras"] = edited["category_extras"].fillna("").astype(str)
-
-            st.session_state[ROOMCATS_KEY] = edited
-            cfg["room_categories"] = edited.to_dict(orient="records")
-            st.success("Room categories updated in this config (remember to click **Save config**).")
-        else:
-            cats_cfg = st.session_state[ROOMCATS_KEY].copy()
-            cats_cfg = _apply_row_defaults(cats_cfg, "name", {"min_guests": 1, "max_guests": 99})
-            cats_cfg["name"] = cats_cfg["name"].fillna("").astype(str)
-            cats_cfg["min_guests"] = pd.to_numeric(cats_cfg["min_guests"], errors="coerce").fillna(1).astype(int)
-            cats_cfg["max_guests"] = pd.to_numeric(cats_cfg["max_guests"], errors="coerce").fillna(99).astype(int)
-            if "category_extras" not in cats_cfg.columns:
-                cats_cfg["category_extras"] = ""
-            cats_cfg["category_extras"] = cats_cfg["category_extras"].fillna("").astype(str)
-
-            cfg["room_categories"] = cats_cfg.to_dict(orient="records")
+    
+        edited = st.data_editor(
+            st.session_state[ROOMCATS_KEY],
+            key="roomcats_editor_widget",
+            use_container_width=True,
+            num_rows="dynamic",
+            column_config={
+                "name": st.column_config.TextColumn("Type name", required=True),
+                "min_guests": st.column_config.NumberColumn("Min guests", min_value=1, step=1),
+                "max_guests": st.column_config.NumberColumn("Max guests", min_value=1, step=1),
+                "category_extras": st.column_config.TextColumn(
+                    "Category extras (use ';')",
+                    help="Optional. Example: Baby bed; Extra bed; 2x Children",
+                ),
+            },
+        )
+    
+        edited = _apply_row_defaults(edited, "name", {"min_guests": 1, "max_guests": 99})
+        edited["name"] = edited["name"].fillna("").astype(str)
+        edited["min_guests"] = pd.to_numeric(edited["min_guests"], errors="coerce").fillna(1).astype(int)
+        edited["max_guests"] = pd.to_numeric(edited["max_guests"], errors="coerce").fillna(99).astype(int)
+    
+        if "category_extras" not in edited.columns:
+            edited["category_extras"] = ""
+        edited["category_extras"] = edited["category_extras"].fillna("").astype(str)
+    
+        st.session_state[ROOMCATS_KEY] = edited
+        cfg["room_categories"] = edited.to_dict(orient="records")
 
     with tabs[3]:
         col1, col2 = st.columns(2)
