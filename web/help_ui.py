@@ -7,7 +7,7 @@ def render_login_explanation() -> None:
     st.write(
         "ReservoDojo creates realistic booking scenarios for training. "
         "Trainees create the booking in the real PMS. "
-        "Trainers then review the result and mark it as Okay or Needs review."
+        "Trainers then review the result and mark it as Perfect or Needs review."
     )
 
     with st.expander("How the training workflow works", expanded=False):
@@ -16,7 +16,7 @@ def render_login_explanation() -> None:
         st.markdown("**Step 2 — Create the booking in the PMS**")
         st.write("The trainee creates the booking in the real PMS according to the scenario.")
         st.markdown("**Step 3 — Review**")
-        st.write("The trainer compares scenario vs. booking and marks the scenario as Okay or Needs review.")
+        st.write("The trainer compares scenario vs. booking and marks the scenario as Perfect or Needs review (and set it to Done after reviewing it with the trainee)")
 
 
 def render_help_tab() -> None:
@@ -57,8 +57,10 @@ def render_help_tab() -> None:
         "and then marks the scenario:"
     )
     st.markdown("- New: not reviewed yet")
-    st.markdown("- Okay: correct booking")
     st.markdown("- Needs review: mistakes found or improvements needed")
+    st.markdown("- Done: booking was discussed with trainee")
+    st.markdown("- Perfect: everything is perfect")
+
 
     st.divider()
 
@@ -75,7 +77,7 @@ def render_help_tab() -> None:
     st.markdown("**Review**")
     st.write(
         "Shows previously finished scenarios. Click a row to see the scenario details in a readable format. "
-        "Trainers can mark each scenario as Okay or Needs review."
+        "Trainers can mark each scenario as Perfect, Done or Needs review."
     )
 
     st.markdown("**Config**")
@@ -170,7 +172,7 @@ def render_help_tab() -> None:
 
     st.markdown("**For trainers**")
     st.markdown("- Review scenarios in Review and focus on New / Needs review.")
-    st.markdown("- When marking Needs review, discuss the booking together and explain what to change next time.")
+    st.markdown("- When marking Needs review, discuss the booking together and explain what to change next time. After this is done, set it to...Done")
 
     st.divider()
 
