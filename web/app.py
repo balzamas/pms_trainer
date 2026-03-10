@@ -842,39 +842,122 @@ elif page == "Review":
         st.info("No scenario saved yet.")
         st.stop()
 
-    # -------- follow-up progress overview --------
+    
+
+    
+    # -------- progress overview --------
+    st.markdown("### Training progress")
+
+    progress_rows = []
+
+    # --- Follow-ups ---
     configured_followups = [s.strip() for s in cfg.get("follow_up_tasks", []) if str(s).strip()]
+    for followup_label in configured_followups:
+        matching_rows = [
+            r for r in rows
+            if (r.get("followup_text") or "").strip() == followup_label
+        ]
 
-    if configured_followups:
-        st.markdown("### Follow-up progress")
+        done_count = sum(1 for r in matching_rows if (r.get("review_status") or "").strip() == "done")
+        perfect_count = sum(1 for r in matching_rows if (r.get("review_status") or "").strip() == "perfect")
+        completed = done_count + perfect_count > 0
+        perfected = perfect_count > 0
 
-        progress_rows = []
-        for followup_label in configured_followups:
-            matching_rows = [
-                r for r in rows
-                if (r.get("followup_text") or "").strip() == followup_label
-            ]
+        progress_rows.append(
+            {
+                "Type": "Follow-up",
+                "Item": followup_label,
+                "Completed": "✅" if completed else "⬜",
+                "Perfect": "⭐" if perfected else "",
+                "Done": done_count,
+                "Perfect count": perfect_count,
+            }
+        )
 
-            done_count = sum(1 for r in matching_rows if (r.get("review_status") or "").strip() == "done")
-            perfect_count = sum(1 for r in matching_rows if (r.get("review_status") or "").strip() == "perfect")
-            completed = done_count + perfect_count > 0
-            perfected = perfect_count > 0
+    # --- Room types ---
+    configured_room_types = [
+        str(r.get("name", "")).strip()
+        for r in cfg.get("room_categories", [])
+        if str(r.get("name", "")).strip()
+    ]
+    for room_type in configured_room_types:
+        matching_rows = [
+            r for r in rows
+            if str((r.get("scenario_json") or {}).get("Room category", "")).strip() == room_type
+        ]
 
-            progress_rows.append(
-                {
-                    "Follow-up": followup_label,
-                    "Completed": "✅" if completed else "⬜",
-                    "Perfect": "⭐" if perfected else "",
-                    "Done": done_count,
-                    "Perfect count": perfect_count,
-                }
-            )
+        done_count = sum(1 for r in matching_rows if (r.get("review_status") or "").strip() == "done")
+        perfect_count = sum(1 for r in matching_rows if (r.get("review_status") or "").strip() == "perfect")
+        completed = done_count + perfect_count > 0
+        perfected = perfect_count > 0
 
+        progress_rows.append(
+            {
+                "Type": "Room type",
+                "Item": room_type,
+                "Completed": "✅" if completed else "⬜",
+                "Perfect": "⭐" if perfected else "",
+                "Done": done_count,
+                "Perfect count": perfect_count,
+            }
+        )
+
+    # --- Requests & extras ---
+    configured_extras = [s.strip() for s in cfg.get("extra_services", []) if str(s).strip()]
+
+    room_category_extras = []
+    for room_cat in cfg.get("room_categories", []) or []:
+        extra_text = str(room_cat.get("category_extras", "") or "").strip()
+        if extra_text:
+            room_category_extras.extend([x.strip() for x in extra_text.split(";") if x.strip()])
+
+    all_configured_extras = []
+    seen = set()
+    for item in configured_extras + room_category_extras:
+        if item not in seen:
+            seen.add(item)
+            all_configured_extras.append(item)
+
+    for extra_label in all_configured_extras:
+        matching_rows = []
+
+        for r in rows:
+            scenario_json = r.get("scenario_json") or {}
+            extra_services_raw = str(scenario_json.get("Extra services", "") or "").strip()
+
+            if not extra_services_raw or extra_services_raw == "(none)":
+                items = []
+            else:
+                items = [x.strip() for x in extra_services_raw.split(",") if x.strip()]
+
+            if extra_label in items:
+                matching_rows.append(r)
+
+        done_count = sum(1 for r in matching_rows if (r.get("review_status") or "").strip() == "done")
+        perfect_count = sum(1 for r in matching_rows if (r.get("review_status") or "").strip() == "perfect")
+        completed = done_count + perfect_count > 0
+        perfected = perfect_count > 0
+
+        progress_rows.append(
+            {
+                "Type": "Request / extra",
+                "Item": extra_label,
+                "Completed": "✅" if completed else "⬜",
+                "Perfect": "⭐" if perfected else "",
+                "Done": done_count,
+                "Perfect count": perfect_count,
+            }
+        )
+
+    if progress_rows:
         progress_df = pd.DataFrame(progress_rows)
         st.dataframe(progress_df, use_container_width=True, hide_index=True)
-        st.divider()
+    else:
+        st.info("No training items configured yet.")
 
-    hide_done_perfect = st.checkbox("Hide scenarios marked 'done' or 'perfect'", value=False)
+    st.divider()
+
+    hide_done_perfect = st.checkbox("Hide scenarios marked 'done' or 'perfect'", value=True)
 
     def _date_only(ts: str) -> str:
         try:
