@@ -318,6 +318,16 @@ def perfect_icon(count: int) -> str:
     return "⭐" * count if count > 0 else ""
 
 
+def progress_score(completed: str, perfect: str) -> int:
+    if perfect == "🏆":
+        return 3
+    if perfect:
+        return 2
+    if completed == "✅":
+        return 1
+    return 0
+
+
 def build_training_progress_rows(cfg: dict, rows: list[dict]) -> list[dict]:
     progress_rows = []
 
@@ -1110,13 +1120,23 @@ elif page == "Progress":
         st.stop()
 
     progress_df = pd.DataFrame(progress_rows).sort_values(["Type", "Item"]).reset_index(drop=True)
-    
+
+    current_score = sum(
+        progress_score(row["Completed"], row["Perfect"])
+        for _, row in progress_df.iterrows()
+    )
+    max_score = len(progress_df) * 3
+    score_ratio = current_score / max_score if max_score else 0.0
+
+    st.metric("Global score", f"{current_score} / {max_score}")
+    st.progress(score_ratio)
+
     row_height = 35
     header_height = 38
-    max_height = 1200  # optional safety cap
-    
+    max_height = 2000
+
     table_height = min(header_height + len(progress_df) * row_height, max_height)
-    
+
     st.dataframe(
         progress_df,
         use_container_width=True,
