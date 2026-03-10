@@ -1,4 +1,5 @@
 # app.py
+# (c)d.berger@dontsniff.co.uk
 from __future__ import annotations
 
 from datetime import datetime
