@@ -59,7 +59,7 @@ def render_help_tab() -> None:
     st.markdown("- New: not reviewed yet")
     st.markdown("- Needs review: mistakes found or improvements needed")
     st.markdown("- Done: booking was discussed with trainee")
-    st.markdown("- Perfect: everything is perfect")
+    st.markdown("- Perfect: everything is perfect, no discussion needed")
 
 
     st.divider()
