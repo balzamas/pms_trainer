@@ -103,7 +103,10 @@ def ensure_membership_loaded() -> None:
 
     if not mem:
         st.error("This user is not linked to any accommodation yet.")
-        st.info("Log in with the admin user (the one who created the accommodation) and create this user from the Users tab.")
+        st.info(
+            "Log in with the admin user (the one who created the accommodation) "
+            "and create this user from the Users tab."
+        )
         st.stop()
 
     st.session_state["accommodation_id"] = mem["accommodation_id"]
@@ -129,6 +132,10 @@ def logout():
         "scenario_cfg",
         "scenario_difficulty",
         "followup",
+        "finish_booking_number",
+        "is_saving_finish",
+        "finish_save_message",
+        "finish_save_message_type",
     ]:
         st.session_state.pop(k, None)
 
@@ -452,9 +459,17 @@ def config_editor(cfg: dict) -> tuple[dict, bool]:
     with tabs[4]:
         pol = dict(cfg.get("breakfast_policy", {}))
         pol["enabled"] = st.checkbox("Enable breakfast", bool(pol.get("enabled", False)))
-        pol["probability_any_breakfast"] = st.slider("Probability any breakfast", 0.0, 1.0, float(pol.get("probability_any_breakfast", 0.7)))
+        pol["probability_any_breakfast"] = st.slider(
+            "Probability any breakfast",
+            0.0,
+            1.0,
+            float(pol.get("probability_any_breakfast", 0.7)),
+        )
         pol["probability_full_group_if_any"] = st.slider(
-            "Probability full group if any", 0.0, 1.0, float(pol.get("probability_full_group_if_any", 0.7))
+            "Probability full group if any",
+            0.0,
+            1.0,
+            float(pol.get("probability_full_group_if_any", 0.7)),
         )
 
         types_txt = st.text_area("Breakfast types (one per line)", "\n".join(cfg.get("breakfast_types", [])), height=160)
@@ -500,6 +515,15 @@ def apply_difficulty_to_cfg(cfg: dict, difficulty: str) -> dict:
 # -------------------- main UI --------------------
 
 st.set_page_config(page_title="ReservoDojo", layout="wide")
+
+if "is_saving_finish" not in st.session_state:
+    st.session_state["is_saving_finish"] = False
+
+if "finish_save_message" not in st.session_state:
+    st.session_state["finish_save_message"] = None
+
+if "finish_save_message_type" not in st.session_state:
+    st.session_state["finish_save_message_type"] = None
 
 require_auth_or_login()
 ensure_membership_loaded()
@@ -712,20 +736,45 @@ elif page == "Scenario":
     with col2:
         st.subheader("Finish")
 
+        finish_status = st.empty()
+
+        current_msg = st.session_state.get("finish_save_message")
+        current_msg_type = st.session_state.get("finish_save_message_type")
+
+        if st.session_state.get("is_saving_finish"):
+            finish_status.info("Saving scenario to database...")
+        elif current_msg:
+            if current_msg_type == "success":
+                finish_status.success(current_msg)
+            elif current_msg_type == "error":
+                finish_status.error(current_msg)
+            else:
+                finish_status.info(current_msg)
+
         with st.form("finish_task", clear_on_submit=True):
             booking_number = st.text_input("Booking number", key="finish_booking_number")
 
             submitted = st.form_submit_button(
                 "Mark finished",
-                disabled=not st.session_state.get("scenario"),
+                disabled=(
+                    not st.session_state.get("scenario")
+                    or st.session_state.get("is_saving_finish", False)
+                ),
             )
 
         if submitted:
             booking_number_clean = booking_number.strip()
 
             if not booking_number_clean:
-                st.error("Please enter a booking number.")
+                st.session_state["finish_save_message"] = "Please enter a booking number."
+                st.session_state["finish_save_message_type"] = "error"
+                finish_status.error("Please enter a booking number.")
                 st.stop()
+
+            st.session_state["is_saving_finish"] = True
+            st.session_state["finish_save_message"] = "Saving scenario to database..."
+            st.session_state["finish_save_message_type"] = "info"
+            finish_status.info("Saving scenario to database...")
 
             require_auth_or_login()
             ensure_membership_loaded()
@@ -737,21 +786,29 @@ elif page == "Scenario":
                 followup = pick_random_followup(effective_cfg)
 
             try:
-                with st.spinner("Saving finished scenario..."):
-                    sb = get_authed_sb()
-                    db.insert_task(
-                        sb=sb,
-                        accommodation_id=accommodation_id,
-                        created_by=st.session_state["user_id"],
-                        generated_id=st.session_state["generated_id"],
-                        booking_number=booking_number_clean,
-                        scenario_json=st.session_state["scenario"],
-                        followup_text=followup,
-                    )
+                sb = get_authed_sb()
+                db.insert_task(
+                    sb=sb,
+                    accommodation_id=accommodation_id,
+                    created_by=st.session_state["user_id"],
+                    generated_id=st.session_state["generated_id"],
+                    booking_number=booking_number_clean,
+                    scenario_json=st.session_state["scenario"],
+                    followup_text=followup,
+                )
 
-                st.success(f"Saved scenario (Nr.: {booking_number_clean}) result to database.")
+                st.session_state["is_saving_finish"] = False
+                st.session_state["finish_save_message"] = (
+                    f"Saved scenario (Nr.: {booking_number_clean}) result to database."
+                )
+                st.session_state["finish_save_message_type"] = "success"
+                finish_status.success(st.session_state["finish_save_message"])
+
             except Exception as e:
-                st.error(f"Saving scenario failed: {e}")
+                st.session_state["is_saving_finish"] = False
+                st.session_state["finish_save_message"] = f"Saving scenario failed: {e}"
+                st.session_state["finish_save_message_type"] = "error"
+                finish_status.error(st.session_state["finish_save_message"])
                 st.stop()
 
             txt = render_task_text(
