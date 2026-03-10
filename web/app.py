@@ -1121,7 +1121,6 @@ elif page == "Progress":
         hide_index=True,
         height=table_height,
     )
-    st.dataframe(progress_df, use_container_width=True, hide_index=True)
 
 # -------------------- HELP --------------------
 elif page == "Help":
