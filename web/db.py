@@ -109,16 +109,14 @@ class DB:
         """
         sb = self.admin_client()
 
-        # supabase-py v2 style
         res = sb.auth.admin.create_user(
             {
                 "email": email,
                 "password": password,
-                "email_confirm": True,  # admin-set password; skip confirmation friction
+                "email_confirm": True,
             }
         )
 
-        # tolerate object/dict shapes
         user = getattr(res, "user", None)
         if user is None and isinstance(res, dict):
             user = res.get("user")
@@ -136,6 +134,7 @@ class DB:
         return str(user_id)
 
     # ---------- accommodation + membership ----------
+
     def get_profiles_by_ids(self, sb: Client, user_ids: list[str]) -> dict[str, dict]:
         if not user_ids:
             return {}
@@ -143,19 +142,19 @@ class DB:
             res = sb.table("profiles").select("user_id, display_name, email").in_("user_id", user_ids).execute()
         except Exception as e:
             raise RuntimeError(f"Supabase get_profiles_by_ids failed: {repr(e)}")
-    
+
         if res is None:
             return {}
         err = getattr(res, "error", None)
         if err:
             raise RuntimeError(f"Supabase get_profiles_by_ids error: {err}")
-    
+
         out: dict[str, dict] = {}
         for r in (res.data or []):
             if isinstance(r, dict) and r.get("user_id"):
                 out[str(r["user_id"])] = r
         return out
-    
+
     def upsert_profile(self, sb: Client, user_id: str, display_name: str, email: Optional[str] = None) -> None:
         try:
             payload = {"user_id": user_id, "display_name": display_name}
@@ -164,20 +163,18 @@ class DB:
             res = sb.table("profiles").upsert(payload, on_conflict="user_id").execute()
         except Exception as e:
             raise RuntimeError(f"Supabase upsert_profile failed: {repr(e)}")
-    
+
         if res is None:
             raise RuntimeError("Supabase upsert_profile failed: execute() returned None.")
         err = getattr(res, "error", None)
         if err:
             raise RuntimeError(f"Supabase upsert_profile error: {err}")
-    
-    
+
     def get_profiles_for_accommodation(self, sb: Client, accommodation_id: str) -> dict[str, dict]:
         """
         Returns dict keyed by user_id: { user_id: {display_name, email}, ... }
         """
         try:
-            # Get member user_ids
             mem_res = (
                 sb.table("memberships")
                 .select("user_id")
@@ -186,29 +183,28 @@ class DB:
             )
         except Exception as e:
             raise RuntimeError(f"Supabase get_profiles_for_accommodation memberships failed: {repr(e)}")
-    
+
         if mem_res is None or getattr(mem_res, "error", None):
             raise RuntimeError(f"Supabase memberships fetch error: {getattr(mem_res, 'error', None)}")
-    
+
         member_ids = [r["user_id"] for r in (mem_res.data or []) if isinstance(r, dict) and r.get("user_id")]
         if not member_ids:
             return {}
-    
+
         try:
             prof_res = sb.table("profiles").select("user_id, display_name, email").in_("user_id", member_ids).execute()
         except Exception as e:
             raise RuntimeError(f"Supabase profiles fetch failed: {repr(e)}")
-    
+
         if prof_res is None or getattr(prof_res, "error", None):
             raise RuntimeError(f"Supabase profiles fetch error: {getattr(prof_res, 'error', None)}")
-    
+
         out: dict[str, dict] = {}
         for r in (prof_res.data or []):
             if isinstance(r, dict) and r.get("user_id"):
                 out[str(r["user_id"])] = r
         return out
 
-    
     def create_accommodation(self, sb: Client, name: str) -> str:
         try:
             res = sb.table("accommodations").insert({"name": name}).execute()
@@ -218,7 +214,6 @@ class DB:
         if res is None or getattr(res, "error", None):
             raise RuntimeError(f"Supabase create_accommodation error: {getattr(res, 'error', None)}")
 
-        # insert returns list of rows
         row = (res.data or [None])[0]
         if not row or "id" not in row:
             raise RuntimeError("Supabase create_accommodation returned no id.")
@@ -245,7 +240,7 @@ class DB:
     def get_my_membership(self, sb: Client, user_id: str) -> Optional[dict]:
         """
         Returns {accommodation_id, role} or None if no membership exists.
-    
+
         IMPORTANT: postgrest-py sometimes throws Error 204 "Missing response"
         instead of returning an empty result. We treat that as 'no membership'.
         """
@@ -259,28 +254,25 @@ class DB:
             )
         except Exception as e:
             msg = str(e)
-            # Treat all these as "no membership row yet"
             if "Error 204" in msg or "Missing response" in msg or "No Content" in msg:
                 return None
-            # Anything else is a real problem
             raise RuntimeError(f"Supabase get_my_membership failed: {repr(e)}")
-    
+
         if res is None:
             return None
-    
+
         err = getattr(res, "error", None)
         if err:
-            # Some versions represent 'no rows' oddly — treat as None
             if "0 rows" in str(err) or "No rows" in str(err):
                 return None
             raise RuntimeError(f"Supabase get_my_membership error: {err}")
-    
+
         data = getattr(res, "data", None) or []
         if isinstance(data, list) and data and isinstance(data[0], dict):
             row = data[0]
             if row.get("accommodation_id") and row.get("role"):
                 return row
-    
+
         return None
 
     def list_members(self, sb: Client, accommodation_id: str) -> list[dict]:
@@ -304,11 +296,11 @@ class DB:
         return res.data or []
 
     # ---------- configs (per accommodation) ----------
-    
+
     def get_config(self, sb: Client, accommodation_id: str) -> Optional[dict]:
         """
         Returns config_json dict or None if no config row exists yet.
-    
+
         Avoid maybe_single() because some postgrest-py/supabase-py combos
         throw on 204 No Content ("Missing response") instead of returning None.
         """
@@ -323,7 +315,6 @@ class DB:
         except Exception as e:
             msg = str(e)
             status = getattr(e, "status_code", None) or getattr(e, "status", None)
-            # Treat common "no row" / 204 shapes as None
             if (
                 status == 204
                 or "Error 204" in msg
@@ -332,21 +323,21 @@ class DB:
             ):
                 return None
             raise RuntimeError(f"Supabase get_config failed: {repr(e)}")
-    
+
         if res is None:
             return None
-    
+
         err = getattr(res, "error", None)
         if err:
             err_msg = str(err)
             if "0 rows" in err_msg or "No rows" in err_msg:
                 return None
             raise RuntimeError(f"Supabase get_config error: {err}")
-    
+
         data = getattr(res, "data", None) or []
         if isinstance(data, list) and data and isinstance(data[0], dict):
             return data[0].get("config_json")
-    
+
         return None
 
     def upsert_config(self, sb: Client, accommodation_id: str, config_json: dict) -> None:
@@ -424,7 +415,7 @@ class DB:
         return res.data or []
 
     def update_task_review_status(self, sb: Client, task_id: str, review_status: str) -> None:
-        if review_status not in ("new", "okay", "needs_review"):
+        if review_status not in ("new", "needs_review", "done", "perfect"):
             raise ValueError("Invalid review_status.")
 
         try:
