@@ -739,55 +739,52 @@ elif page == "Scenario":
                 disabled=not st.session_state.get("scenario"),
             )
 
-    if submitted:
-        if not booking_number.strip():
-            st.error("Please enter a booking number.")
-            st.stop()
-    
-        require_auth_or_login()
-        ensure_membership_loaded()
-    
-        status_box = st.empty()
-        status_box.info("Saving finished scenario...")
-    
-        effective_cfg = st.session_state.get("scenario_cfg") or cfg
-    
-        followup: Optional[str] = None
-        if should_generate_followup(effective_cfg):
-            followup = pick_random_followup(effective_cfg)
-    
-        try:
-            sb = get_authed_sb()
-            db.insert_task(
-                sb=sb,
-                accommodation_id=accommodation_id,
-                created_by=st.session_state["user_id"],
-                generated_id=st.session_state["generated_id"],
-                booking_number=booking_number.strip(),
-                scenario_json=st.session_state["scenario"],
-                followup_text=followup,
+        if submitted:
+            if not booking_number.strip():
+                st.error("Please enter a booking number.")
+                st.stop()
+        
+            require_auth_or_login()
+            ensure_membership_loaded()
+        
+            effective_cfg = st.session_state.get("scenario_cfg") or cfg
+        
+            followup: Optional[str] = None
+            if should_generate_followup(effective_cfg):
+                followup = pick_random_followup(effective_cfg)
+        
+            try:
+                with st.spinner("Saving finished scenario..."):
+                    sb = get_authed_sb()
+                    db.insert_task(
+                        sb=sb,
+                        accommodation_id=accommodation_id,
+                        created_by=st.session_state["user_id"],
+                        generated_id=st.session_state["generated_id"],
+                        booking_number=booking_number.strip(),
+                        scenario_json=st.session_state["scenario"],
+                        followup_text=followup,
+                    )
+                st.success("Saved scenario result to database.")
+            except Exception as e:
+                st.error(f"Saving scenario failed: {e}")
+                st.stop()
+
+            txt = render_task_text(
+                st.session_state["scenario"],
+                booking_number.strip(),
+                st.session_state["generated_id"],
+                followup,
             )
-            status_box.success("Scenario saved to database.")
-        except Exception as e:
-            status_box.empty()
-            st.error(f"Saving scenario failed: {e}")
-            st.stop()
-    
-        txt = render_task_text(
-            st.session_state["scenario"],
-            booking_number.strip(),
-            st.session_state["generated_id"],
-            followup,
-        )
-    
-        st.download_button(
-            "Download scenario (TXT)",
-            data=txt,
-            file_name=f"PMS_Scenario_{st.session_state['generated_id']}_BN-{booking_number.strip()}.txt",
-        )
-    
-        if followup:
-            st.warning(f"Follow-up: {followup}")
+
+            st.download_button(
+                "Download scenario (TXT)",
+                data=txt,
+                file_name=f"PMS_Scenario_{st.session_state['generated_id']}_BN-{booking_number.strip()}.txt",
+            )
+
+            if followup:
+                st.warning(f"Follow-up: {followup}")
 
 # -------------------- REVIEW --------------------
 elif page == "Review":
