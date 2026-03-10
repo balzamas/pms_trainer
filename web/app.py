@@ -689,7 +689,7 @@ elif page == "Scenario":
             with st.container(border=True):
                 st.markdown(f"**Guest name**  \n{scenario.get('Guest name', '')}")
                 if guest_comment:
-                    st.markdown(f"**Guest comment**  \n{guest_comment}")
+                    st.markdown(f"**Note**  \n{guest_comment}")
 
                 st.divider()
 
@@ -907,7 +907,7 @@ elif page == "Review":
 
         st.markdown(f"**Guest name**  \n{scenario.get('Guest name','')}")
         if guest_comment:
-            st.markdown(f"**Guest comment**  \n{guest_comment}")
+            st.markdown(f"**Note**  \n{guest_comment}")
 
         st.divider()
 
