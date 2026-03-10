@@ -645,8 +645,10 @@ with col_title:
     st.markdown("## ReservoDojo")
     st.caption("Practice real reservations")
 
-menu_options = ["Scenario", "Review", "Help", "Progress"]
+menu_options = ["Scenario", "Help", "Progress"]
+
 if role == "admin":
+    menu_options.insert(1, "Review")
     menu_options.insert(2, "Config")
     menu_options.insert(3, "Users")
 
