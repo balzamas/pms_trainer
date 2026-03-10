@@ -1109,6 +1109,8 @@ elif page == "Progress":
         st.info("No training items configured yet.")
         st.stop()
 
+    progress_df = pd.DataFrame(progress_rows).sort_values(["Type", "Item"]).reset_index(drop=True)
+    
     row_height = 35
     header_height = 38
     max_height = 1200  # optional safety cap
