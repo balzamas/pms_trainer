@@ -1128,8 +1128,20 @@ elif page == "Progress":
     max_score = len(progress_df) * 5
     score_ratio = current_score / max_score if max_score else 0.0
 
-    st.metric("Global score", f"{current_score} / {max_score}")
+    progress_pct = int(score_ratio * 100)
+    
+    if progress_pct < 20:
+        level = "🥋 White Belt"
+    elif progress_pct < 40:
+        level = "🥋 Yellow Belt"
+    elif progress_pct < 60:
+        level = "🥋 Green Belt"
+    else:
+        level = "🥋 Black Belt"
+
+    st.metric("Training level", level)
     st.progress(score_ratio)
+    st.caption(f"Progress: {progress_pct}%")
 
     row_height = 35
     header_height = 38
