@@ -116,8 +116,6 @@ def logout():
     except Exception:
         pass
 
-    # NOTE: We intentionally keep scenario-related keys if you want to preserve local state,
-    # but on explicit logout we clear everything.
     for k in [
         "access_token",
         "refresh_token",
@@ -162,16 +160,15 @@ def login_ui():
             email = st.text_input("Email", key="login_email")
             password = st.text_input("Password", type="password", key="login_password")
             login_submitted = st.form_submit_button("Login", type="primary")
-    
+
         if login_submitted:
             try:
                 res = db.sign_in(email.strip(), password)
                 _set_session_from_auth(res)
-    
-                # load membership
+
                 require_auth_or_login()
                 ensure_membership_loaded()
-    
+
                 st.success("Logged in.")
                 st.rerun()
             except Exception as e:
@@ -183,16 +180,14 @@ def login_ui():
             email2 = st.text_input("Admin email", key="signup_email")
             password2 = st.text_input("Admin password", type="password", key="signup_password")
             signup_submitted = st.form_submit_button("Create accommodation", type="primary")
-    
+
         if signup_submitted:
             if not accommodation_name.strip():
                 st.error("Please enter a hostel/accommodation name.")
                 st.stop()
             try:
-                # 1) create auth user
                 res = db.sign_up(email2.strip(), password2)
-                # If your project requires email confirmation, session might be missing here.
-                # We'll handle both cases:
+
                 session = getattr(res, "session", None)
                 if session is None and isinstance(res, dict):
                     session = res.get("session")
@@ -201,24 +196,22 @@ def login_ui():
                     session = getattr(data, "session", None)
                     if session is None and isinstance(data, dict):
                         session = data.get("session")
-    
+
                 if not session:
                     st.info("Account created. Check your email to confirm, then log in.")
                     st.stop()
-    
-                # 2) set session_state from auth
+
                 _set_session_from_auth(res)
-    
-                # 3) bootstrap with service role
+
                 sb_admin = db.admin_client()
-    
+
                 acc_res = sb_admin.table("accommodations").insert({"name": accommodation_name.strip()}).execute()
                 if acc_res is None or getattr(acc_res, "error", None):
                     raise RuntimeError(f"Could not create accommodation: {getattr(acc_res, 'error', None)}")
                 accommodation_id = (acc_res.data or [{}])[0].get("id")
                 if not accommodation_id:
                     raise RuntimeError("Accommodation created but no id returned.")
-    
+
                 user_id = st.session_state["user_id"]
                 mem_res = (
                     sb_admin.table("memberships")
@@ -227,7 +220,7 @@ def login_ui():
                 )
                 if mem_res is None or getattr(mem_res, "error", None):
                     raise RuntimeError(f"Could not create admin membership: {getattr(mem_res, 'error', None)}")
-    
+
                 cfg0 = default_config()
                 cfg_res = (
                     sb_admin.table("configs")
@@ -239,13 +232,13 @@ def login_ui():
                 )
                 if cfg_res is None or getattr(cfg_res, "error", None):
                     raise RuntimeError(f"Could not create default config: {getattr(cfg_res, 'error', None)}")
-    
+
                 st.session_state["accommodation_id"] = accommodation_id
                 st.session_state["role"] = "admin"
-    
+
                 st.success("Accommodation created. You are logged in as admin.")
                 st.rerun()
-    
+
             except Exception as e:
                 st.error(f"Sign up failed: {e}")
 
@@ -260,7 +253,6 @@ def load_or_init_config() -> dict:
     cfg = db.get_config(sb, accommodation_id)
     if cfg is None:
         cfg = default_config()
-        # only admins can write config under our RLS
         if st.session_state.get("role") == "admin":
             db.upsert_config(sb, accommodation_id, cfg)
 
@@ -315,7 +307,6 @@ def config_editor(cfg: dict) -> tuple[dict, bool]:
     cfg = normalize_config(cfg)
     tabs = st.tabs(["General", "Guest profiles", "Room types", "Requests & follow-ups", "Breakfast"])
 
-    # --- General ---
     with tabs[0]:
         bw = dict(cfg.get("booking_window", {}))
         stay = dict(cfg.get("stay_length_nights", {}))
@@ -341,7 +332,6 @@ def config_editor(cfg: dict) -> tuple[dict, bool]:
         cfg["booking_window"] = bw
         cfg["stay_length_nights"] = stay
 
-    # --- Guests ---
     with tabs[1]:
         st.caption("Add/edit guests. Click **Apply changes** when done editing.")
 
@@ -393,7 +383,6 @@ def config_editor(cfg: dict) -> tuple[dict, bool]:
             guests_cfg["max_guests"] = pd.to_numeric(guests_cfg["max_guests"], errors="coerce").fillna(99).astype(int)
             cfg["guests"] = guests_cfg.to_dict(orient="records")
 
-    # --- Room categories ---
     with tabs[2]:
         st.caption("Add/edit room types. Click **Apply changes** when done editing.")
         st.caption("Type extras will be mixed into the same 'Requests & extras' list during scenario generation.")
@@ -449,7 +438,6 @@ def config_editor(cfg: dict) -> tuple[dict, bool]:
 
             cfg["room_categories"] = cats_cfg.to_dict(orient="records")
 
-    # --- Services & follow-ups ---
     with tabs[3]:
         col1, col2 = st.columns(2)
         with col1:
@@ -461,12 +449,13 @@ def config_editor(cfg: dict) -> tuple[dict, bool]:
             followups_txt = st.text_area("One per line", "\n".join(cfg.get("follow_up_tasks", [])), height=240)
             cfg["follow_up_tasks"] = [s.strip() for s in followups_txt.splitlines() if s.strip()]
 
-    # --- Breakfast ---
     with tabs[4]:
         pol = dict(cfg.get("breakfast_policy", {}))
         pol["enabled"] = st.checkbox("Enable breakfast", bool(pol.get("enabled", False)))
         pol["probability_any_breakfast"] = st.slider("Probability any breakfast", 0.0, 1.0, float(pol.get("probability_any_breakfast", 0.7)))
-        pol["probability_full_group_if_any"] = st.slider("Probability full group if any", 0.0, 1.0, float(pol.get("probability_full_group_if_any", 0.7)))
+        pol["probability_full_group_if_any"] = st.slider(
+            "Probability full group if any", 0.0, 1.0, float(pol.get("probability_full_group_if_any", 0.7))
+        )
 
         types_txt = st.text_area("Breakfast types (one per line)", "\n".join(cfg.get("breakfast_types", [])), height=160)
         cfg["breakfast_types"] = [t.strip() for t in types_txt.splitlines() if t.strip()]
@@ -524,7 +513,6 @@ with st.sidebar:
 role = st.session_state.get("role", "user")
 accommodation_id = st.session_state["accommodation_id"]
 
-# Config is per accommodation
 if "cfg" not in st.session_state:
     st.session_state["cfg"] = load_or_init_config()
 
@@ -558,8 +546,7 @@ if page == "Users":
         st.session_state["new_user_password"] = ""
         st.session_state["new_user_role"] = "user"
         st.session_state.pop("clear_new_user_form", None)
-        
-    # --- create user form ---
+
     with st.form("create_user_form"):
         new_name = st.text_input("Name", key="new_user_name")
         new_email = st.text_input("Email", key="new_user_email")
@@ -576,10 +563,8 @@ if page == "Users":
             st.stop()
 
         try:
-            # 1) create auth user (service role)
             new_user_id = db.admin_create_user(new_email.strip(), new_password)
 
-            # 2) create membership (as the logged-in admin, via RLS)
             sb = get_authed_sb()
             db.add_membership(sb, accommodation_id, new_user_id, new_role)
 
@@ -587,11 +572,7 @@ if page == "Users":
             db.upsert_profile(sb_admin, new_user_id, new_name.strip() or new_email.strip(), new_email.strip())
 
             st.success(f"Created user {new_email.strip()} with role '{new_role}'.")
-
-            # ✅ Clear input fields to prevent accidental double-click duplicates
             st.session_state["clear_new_user_form"] = True
-
-            # Re-render the UI so the cleared fields show immediately
             st.rerun()
 
         except Exception as e:
@@ -731,8 +712,8 @@ elif page == "Scenario":
     with col2:
         st.subheader("Finish")
 
-        with st.form("finish_task"):
-            booking_number = st.text_input("Booking number")
+        with st.form("finish_task", clear_on_submit=True):
+            booking_number = st.text_input("Booking number", key="finish_booking_number")
 
             submitted = st.form_submit_button(
                 "Mark finished",
@@ -740,19 +721,21 @@ elif page == "Scenario":
             )
 
         if submitted:
-            if not booking_number.strip():
+            booking_number_clean = booking_number.strip()
+
+            if not booking_number_clean:
                 st.error("Please enter a booking number.")
                 st.stop()
-        
+
             require_auth_or_login()
             ensure_membership_loaded()
-        
+
             effective_cfg = st.session_state.get("scenario_cfg") or cfg
-        
+
             followup: Optional[str] = None
             if should_generate_followup(effective_cfg):
                 followup = pick_random_followup(effective_cfg)
-        
+
             try:
                 with st.spinner("Saving finished scenario..."):
                     sb = get_authed_sb()
@@ -761,18 +744,19 @@ elif page == "Scenario":
                         accommodation_id=accommodation_id,
                         created_by=st.session_state["user_id"],
                         generated_id=st.session_state["generated_id"],
-                        booking_number=booking_number.strip(),
+                        booking_number=booking_number_clean,
                         scenario_json=st.session_state["scenario"],
                         followup_text=followup,
                     )
-                st.success("Saved scenario result to database.")
+
+                st.success(f"Saved scenario (Nr.: {booking_number_clean}) result to database.")
             except Exception as e:
                 st.error(f"Saving scenario failed: {e}")
                 st.stop()
 
             txt = render_task_text(
                 st.session_state["scenario"],
-                booking_number.strip(),
+                booking_number_clean,
                 st.session_state["generated_id"],
                 followup,
             )
@@ -780,7 +764,7 @@ elif page == "Scenario":
             st.download_button(
                 "Download scenario (TXT)",
                 data=txt,
-                file_name=f"PMS_Scenario_{st.session_state['generated_id']}_BN-{booking_number.strip()}.txt",
+                file_name=f"PMS_Scenario_{st.session_state['generated_id']}_BN-{booking_number_clean}.txt",
             )
 
             if followup:
@@ -811,6 +795,9 @@ elif page == "Review":
         except Exception:
             return str(ts)[:10]
 
+    needed_user_ids = sorted({str(r.get("created_by") or "") for r in rows if r.get("created_by")})
+    profiles = db.get_profiles_by_ids(sb, needed_user_ids)
+
     table_rows = []
     row_map = []
 
@@ -821,8 +808,6 @@ elif page == "Review":
 
         sc = r.get("scenario_json", {}) or {}
 
-        needed_user_ids = sorted({str(r.get("created_by") or "") for r in rows if r.get("created_by")})
-        profiles = db.get_profiles_by_ids(sb, needed_user_ids)  # new helper
         created_by = str(r.get("created_by") or "")
         created_name = profiles.get(created_by, {}).get("display_name", "Unknown")
 
