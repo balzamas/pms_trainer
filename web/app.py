@@ -33,6 +33,7 @@ from scenario import (
 from config_model import default_config, normalize_config, validate_config
 from help_ui import render_help_tab, render_login_explanation
 
+
 # -------------------- auth helpers --------------------
 
 
@@ -136,6 +137,7 @@ def logout():
         "is_saving_finish",
         "finish_save_message",
         "finish_save_message_type",
+        "finish_followup_message",
     ]:
         st.session_state.pop(k, None)
 
@@ -525,6 +527,9 @@ if "finish_save_message" not in st.session_state:
 if "finish_save_message_type" not in st.session_state:
     st.session_state["finish_save_message_type"] = None
 
+if "finish_followup_message" not in st.session_state:
+    st.session_state["finish_followup_message"] = None
+
 require_auth_or_login()
 ensure_membership_loaded()
 
@@ -684,6 +689,11 @@ elif page == "Scenario":
             st.session_state["generated_id"] = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             st.session_state["followup"] = None
 
+            # clear old finish messages when generating a fresh scenario
+            st.session_state["finish_save_message"] = None
+            st.session_state["finish_save_message_type"] = None
+            st.session_state["finish_followup_message"] = None
+
         scenario = st.session_state.get("scenario")
         if scenario:
             st.subheader("Scenario details")
@@ -737,9 +747,11 @@ elif page == "Scenario":
         st.subheader("Finish")
 
         finish_status = st.empty()
+        followup_box = st.empty()
 
         current_msg = st.session_state.get("finish_save_message")
         current_msg_type = st.session_state.get("finish_save_message_type")
+        current_followup = st.session_state.get("finish_followup_message")
 
         if st.session_state.get("is_saving_finish"):
             finish_status.info("Saving scenario to database...")
@@ -750,6 +762,9 @@ elif page == "Scenario":
                 finish_status.error(current_msg)
             else:
                 finish_status.info(current_msg)
+
+        if current_followup:
+            followup_box.warning(f"Follow-up: {current_followup}")
 
         with st.form("finish_task", clear_on_submit=True):
             booking_number = st.text_input("Booking number", key="finish_booking_number")
@@ -774,7 +789,9 @@ elif page == "Scenario":
             st.session_state["is_saving_finish"] = True
             st.session_state["finish_save_message"] = "Saving scenario to database..."
             st.session_state["finish_save_message_type"] = "info"
+            st.session_state["finish_followup_message"] = None
             finish_status.info("Saving scenario to database...")
+            followup_box.empty()
 
             require_auth_or_login()
             ensure_membership_loaded()
@@ -802,13 +819,19 @@ elif page == "Scenario":
                     f"Saved scenario (Nr.: {booking_number_clean}) result to database."
                 )
                 st.session_state["finish_save_message_type"] = "success"
+                st.session_state["finish_followup_message"] = followup
+
                 finish_status.success(st.session_state["finish_save_message"])
+                if followup:
+                    followup_box.warning(f"Follow-up: {followup}")
 
             except Exception as e:
                 st.session_state["is_saving_finish"] = False
                 st.session_state["finish_save_message"] = f"Saving scenario failed: {e}"
                 st.session_state["finish_save_message_type"] = "error"
+                st.session_state["finish_followup_message"] = None
                 finish_status.error(st.session_state["finish_save_message"])
+                followup_box.empty()
                 st.stop()
 
             txt = render_task_text(
@@ -823,9 +846,6 @@ elif page == "Scenario":
                 data=txt,
                 file_name=f"PMS_Scenario_{st.session_state['generated_id']}_BN-{booking_number_clean}.txt",
             )
-
-            if followup:
-                st.warning(f"Follow-up: {followup}")
 
 # -------------------- REVIEW --------------------
 elif page == "Review":
