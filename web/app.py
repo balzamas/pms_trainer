@@ -313,7 +313,7 @@ def _apply_row_defaults(df: pd.DataFrame, key_col: str, defaults: dict) -> pd.Da
 
 
 def perfect_icon(count: int) -> str:
-    if count >= 5:
+    if count >= 3:
         return "🏆"
     return "⭐" * count if count > 0 else ""
 
